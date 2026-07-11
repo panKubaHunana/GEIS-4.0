@@ -14,6 +14,7 @@
     
     <!-- Tailwind CSS s konfigurací přepínání tmavého režimu přes třídu -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class'
@@ -1741,11 +1742,11 @@
 
         document.getElementById('btnExportExcel').addEventListener('click', exportStatsToExcel);
 
-        function exportStatsToExcel() {
+        async function exportStatsToExcel() {
             const periodText = currentStatsPeriod === 'week' ? 'tyden' : 'mesic';
             const pickups = localPickups;
             const targets = localDailyTargets;
-            
+
             const now = new Date();
             const nowCopy = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             let filteredPickups = [];
@@ -1767,35 +1768,85 @@
 
             filteredPickups.forEach(p => {
                 const targetObj = targets.find(t => t.id === p.targetId);
-                const custName = targetObj ? targetObj.customer : "Neznamy";
+                const custName = targetObj ? targetObj.customer : "Neznámý";
 
                 if (!customerStats[custName]) customerStats[custName] = { fp: 0, kh: 0, pk: 0 };
                 customerStats[custName].fp += p.fp;
                 customerStats[custName].kh += p.kh;
                 customerStats[custName].pk += (p.pk || 0);
 
-                if (!driverStats[p.driver]) driverStats[p.driver] = { fp: 0, kh: 0, pk: 0, totalTrips: 0 };
+                if (!driverStats[p.driver]) driverStats[p.driver] = { fp: 0, kh: 0, pk: 0 };
                 driverStats[p.driver].fp += p.fp;
                 driverStats[p.driver].kh += p.kh;
                 driverStats[p.driver].pk += (p.pk || 0);
-                driverStats[p.driver].totalTrips += 1;
             });
 
-            let csvContent = "PREHLED ODBERU OD ZAKAZNIKU\nZakaznik;Nalozeno FP;Nalozeno KH;Nalozeno PK\n";
-            for (const [cust, val] of Object.entries(customerStats)) {
-                csvContent += `${cust};${val.fp};${val.kh};${val.pk || 0}\n`;
-            }
-            
-            csvContent += "\nVYKON A VYTIZENI RIDICU\nRidic;Nalozeno FP;Nalozeno KH;Nalozeno PK;Pocet nakladek;Prepoctene palety\n";
-            for (const [driver, val] of Object.entries(driverStats)) {
-                const totalCalculated = val.fp + (val.kh * 0.5) + val.pk;
-                csvContent += `${driver};${val.fp};${val.kh};${val.pk || 0};${val.totalTrips};${totalCalculated}\n`;
-            }
+            // Abecední řazení (česká lokalizace)
+            const driverEntries = Object.entries(driverStats).sort((a,b) => a[0].localeCompare(b[0], 'cs'));
+            const customerEntries = Object.entries(customerStats).sort((a,b) => a[0].localeCompare(b[0], 'cs'));
 
-            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+            const workbook = new ExcelJS.Workbook();
+            const sheetName = `geis_export_${periodText}_${getTodayStr()}`;
+            const ws = workbook.addWorksheet(sheetName);
+
+            ws.getColumn('B').width = 25.3;
+            ws.getColumn('C').width = 10.8;
+            ws.getColumn('D').width = 10.8;
+            ws.getColumn('E').width = 10.8;
+            ws.getColumn('G').width = 25.3;
+            ws.getColumn('H').width = 10.8;
+            ws.getColumn('I').width = 10.8;
+            ws.getColumn('J').width = 10.8;
+
+            const centerBold12 = { font: { bold: true, size: 12 }, alignment: { horizontal: 'center' } };
+            const centerBold11 = { font: { bold: true, size: 11 }, alignment: { horizontal: 'center' } };
+            const rightPlain11 = { font: { bold: false, size: 11 }, alignment: { horizontal: 'right' } };
+            const rightBold11  = { font: { bold: true,  size: 11 }, alignment: { horizontal: 'right' } };
+            const centerPlain12 = { font: { bold: false, size: 12 }, alignment: { horizontal: 'center' } };
+
+            // Řádek 1 – nadpisy tabulek
+            ws.mergeCells('C1:E1');
+            ws.getCell('C1').value = 'NALOŽENO';
+            Object.assign(ws.getCell('C1'), centerBold12);
+
+            ws.mergeCells('H1:J1');
+            ws.getCell('H1').value = 'ODVEZENO';
+            Object.assign(ws.getCell('H1'), centerBold12);
+
+            // Řádek 2 – hlavičky sloupců
+            ws.getCell('B2').value = 'ŘIDIČ';    Object.assign(ws.getCell('B2'), centerBold12);
+            ws.getCell('C2').value = 'FP';       Object.assign(ws.getCell('C2'), centerBold11);
+            ws.getCell('D2').value = 'KH';       Object.assign(ws.getCell('D2'), centerBold11);
+            ws.getCell('E2').value = 'PK';       Object.assign(ws.getCell('E2'), centerBold11);
+
+            ws.getCell('G2').value = 'ZÁKAZNÍK'; Object.assign(ws.getCell('G2'), centerBold12);
+            ws.getCell('H2').value = 'FP';       Object.assign(ws.getCell('H2'), centerBold11);
+            ws.getCell('I2').value = 'KH';       Object.assign(ws.getCell('I2'), centerBold11);
+            ws.getCell('J2').value = 'PK';       Object.assign(ws.getCell('J2'), centerBold11);
+
+            // Data – řidiči (levá tabulka, "NALOŽENO")
+            driverEntries.forEach(([name, val], i) => {
+                const row = 3 + i;
+                ws.getCell(`B${row}`).value = name;      Object.assign(ws.getCell(`B${row}`), rightPlain11);
+                if (val.fp) { ws.getCell(`C${row}`).value = val.fp; Object.assign(ws.getCell(`C${row}`), centerPlain12); }
+                if (val.kh) { ws.getCell(`D${row}`).value = val.kh; Object.assign(ws.getCell(`D${row}`), centerPlain12); }
+                if (val.pk) { ws.getCell(`E${row}`).value = val.pk; Object.assign(ws.getCell(`E${row}`), centerPlain12); }
+            });
+
+            // Data – zákazníci (pravá tabulka, "ODVEZENO")
+            customerEntries.forEach(([name, val], i) => {
+                const row = 3 + i;
+                ws.getCell(`G${row}`).value = name;      Object.assign(ws.getCell(`G${row}`), rightBold11);
+                if (val.fp) { ws.getCell(`H${row}`).value = val.fp; Object.assign(ws.getCell(`H${row}`), centerPlain12); }
+                if (val.kh) { ws.getCell(`I${row}`).value = val.kh; Object.assign(ws.getCell(`I${row}`), centerPlain12); }
+                if (val.pk) { ws.getCell(`J${row}`).value = val.pk; Object.assign(ws.getCell(`J${row}`), centerPlain12); }
+            });
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.download = `geis_export_${periodText}_${getTodayStr()}.csv`;
+            link.download = `${sheetName}.xlsx`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
