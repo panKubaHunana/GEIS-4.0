@@ -10,6 +10,8 @@ summary::-webkit-details-marker {
 }
 summary {
     list-style: none;
+}
+
 /* Vynucení černé barvy písma pro rolovací nabídky a textová pole v Nastavení */
 #tab-settings input,
 #tab-settings select,
