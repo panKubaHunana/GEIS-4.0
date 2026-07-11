@@ -1,0 +1,23 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Skrytí nativního šipkového indikátoru u rozbalovacích nabídek */
+summary::-webkit-details-marker {
+    display: none;
+}
+summary {
+    list-style: none;
+/* Vynucení černé barvy písma pro rolovací nabídky a textová pole v Nastavení */
+#tab-settings input,
+#tab-settings select,
+#tab-settings datalist {
+    color: #000000 !important;
+}
+
+/* Pojistka pro placeholder text, aby nebyl úplně neviditelný, než začneš psát */
+#tab-settings input::placeholder {
+    color: #6b7280 !important; /* Odpovídá Tailwind barvě text-gray-500 */
+}
