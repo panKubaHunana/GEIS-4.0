@@ -31,9 +31,12 @@
         body { 
             -webkit-tap-highlight-color: transparent;
             padding-top: env(safe-area-inset-top, 0px);
-            padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+            padding-bottom: calc(7.5rem + env(safe-area-inset-bottom, 0px));
             transition: background-color 0.2s, color 0.2s;
         }
+        /* Jistota navíc: poslední prvek v každé kartě nesmí nikdy skončit pod fixní spodní navigací */
+        main.hidden-tab:last-child, main.active-tab { scroll-margin-bottom: 6rem; }
+        main > *:last-child { margin-bottom: 1.5rem; }
         .pb-safe {
             padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
         }
@@ -550,13 +553,13 @@
             <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Zálohování a Přenos Dat</h2>
             <p class="text-xs text-gray-500">Zálohujte si data, abyste o ně nepřišli při promazání prohlížeče nebo pro přenos do jiného telefonu.</p>
             <div class="grid grid-cols-2 gap-2">
-                <button onclick="exportData()" class="bg-[#003366] hover:bg-black text-white text-xs font-bold py-2.5 rounded-lg transition-colors shadow-sm">
+                <button type="button" onclick="exportData()" class="bg-[#003366] hover:bg-black text-white text-xs font-bold py-2.5 rounded-lg transition-colors shadow-sm">
                     📥 Exportovat data
                 </button>
-                <label class="bg-gray-100 hover:bg-gray-200 text-slate-700 text-xs font-bold py-2.5 rounded-lg transition-colors shadow-sm text-center cursor-pointer block border border-gray-300">
+                <button type="button" onclick="document.getElementById('importFile').click()" class="bg-gray-100 hover:bg-gray-200 text-slate-700 text-xs font-bold py-2.5 rounded-lg transition-colors shadow-sm text-center border border-gray-300">
                     📤 Importovat data
-                    <input type="file" id="importFile" accept=".json" onchange="importData(event)" class="hidden">
-                </label>
+                </button>
+                <input type="file" id="importFile" accept=".json,application/json" onchange="importData(event)" style="position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;">
             </div>
         </div>
     </main>
@@ -1798,48 +1801,49 @@
             ws.getColumn('I').width = 10.8;
             ws.getColumn('J').width = 10.8;
 
-            const centerBold12 = { font: { bold: true, size: 12 }, alignment: { horizontal: 'center' } };
-            const centerBold11 = { font: { bold: true, size: 11 }, alignment: { horizontal: 'center' } };
-            const rightPlain11 = { font: { bold: false, size: 11 }, alignment: { horizontal: 'right' } };
-            const rightBold11  = { font: { bold: true,  size: 11 }, alignment: { horizontal: 'right' } };
-            const centerPlain12 = { font: { bold: false, size: 12 }, alignment: { horizontal: 'center' } };
+            // Pomocná funkce: nastaví font i zarovnání přímo na buňku (spolehlivé s ExcelJS,
+            // na rozdíl od Object.assign(cell, {...}), který vlastnosti stylu nezapisuje vždy korektně)
+            function styleCell(cell, { bold, size, align }) {
+                cell.font = { bold: !!bold, size: size };
+                cell.alignment = { horizontal: align };
+            }
 
             // Řádek 1 – nadpisy tabulek
             ws.mergeCells('C1:E1');
             ws.getCell('C1').value = 'NALOŽENO';
-            Object.assign(ws.getCell('C1'), centerBold12);
+            styleCell(ws.getCell('C1'), { bold: true, size: 12, align: 'center' });
 
             ws.mergeCells('H1:J1');
             ws.getCell('H1').value = 'ODVEZENO';
-            Object.assign(ws.getCell('H1'), centerBold12);
+            styleCell(ws.getCell('H1'), { bold: true, size: 12, align: 'center' });
 
             // Řádek 2 – hlavičky sloupců
-            ws.getCell('B2').value = 'ŘIDIČ';    Object.assign(ws.getCell('B2'), centerBold12);
-            ws.getCell('C2').value = 'FP';       Object.assign(ws.getCell('C2'), centerBold11);
-            ws.getCell('D2').value = 'KH';       Object.assign(ws.getCell('D2'), centerBold11);
-            ws.getCell('E2').value = 'PK';       Object.assign(ws.getCell('E2'), centerBold11);
+            ws.getCell('B2').value = 'ŘIDIČ';    styleCell(ws.getCell('B2'), { bold: true, size: 12, align: 'center' });
+            ws.getCell('C2').value = 'FP';       styleCell(ws.getCell('C2'), { bold: true, size: 11, align: 'center' });
+            ws.getCell('D2').value = 'KH';       styleCell(ws.getCell('D2'), { bold: true, size: 11, align: 'center' });
+            ws.getCell('E2').value = 'PK';       styleCell(ws.getCell('E2'), { bold: true, size: 11, align: 'center' });
 
-            ws.getCell('G2').value = 'ZÁKAZNÍK'; Object.assign(ws.getCell('G2'), centerBold12);
-            ws.getCell('H2').value = 'FP';       Object.assign(ws.getCell('H2'), centerBold11);
-            ws.getCell('I2').value = 'KH';       Object.assign(ws.getCell('I2'), centerBold11);
-            ws.getCell('J2').value = 'PK';       Object.assign(ws.getCell('J2'), centerBold11);
+            ws.getCell('G2').value = 'ZÁKAZNÍK'; styleCell(ws.getCell('G2'), { bold: true, size: 12, align: 'center' });
+            ws.getCell('H2').value = 'FP';       styleCell(ws.getCell('H2'), { bold: true, size: 11, align: 'center' });
+            ws.getCell('I2').value = 'KH';       styleCell(ws.getCell('I2'), { bold: true, size: 11, align: 'center' });
+            ws.getCell('J2').value = 'PK';       styleCell(ws.getCell('J2'), { bold: true, size: 11, align: 'center' });
 
             // Data – řidiči (levá tabulka, "NALOŽENO")
             driverEntries.forEach(([name, val], i) => {
                 const row = 3 + i;
-                ws.getCell(`B${row}`).value = name;      Object.assign(ws.getCell(`B${row}`), rightPlain11);
-                if (val.fp) { ws.getCell(`C${row}`).value = val.fp; Object.assign(ws.getCell(`C${row}`), centerPlain12); }
-                if (val.kh) { ws.getCell(`D${row}`).value = val.kh; Object.assign(ws.getCell(`D${row}`), centerPlain12); }
-                if (val.pk) { ws.getCell(`E${row}`).value = val.pk; Object.assign(ws.getCell(`E${row}`), centerPlain12); }
+                ws.getCell(`B${row}`).value = name;      styleCell(ws.getCell(`B${row}`), { bold: false, size: 11, align: 'right' });
+                if (val.fp) { ws.getCell(`C${row}`).value = val.fp; styleCell(ws.getCell(`C${row}`), { bold: false, size: 12, align: 'center' }); }
+                if (val.kh) { ws.getCell(`D${row}`).value = val.kh; styleCell(ws.getCell(`D${row}`), { bold: false, size: 12, align: 'center' }); }
+                if (val.pk) { ws.getCell(`E${row}`).value = val.pk; styleCell(ws.getCell(`E${row}`), { bold: false, size: 12, align: 'center' }); }
             });
 
             // Data – zákazníci (pravá tabulka, "ODVEZENO")
             customerEntries.forEach(([name, val], i) => {
                 const row = 3 + i;
-                ws.getCell(`G${row}`).value = name;      Object.assign(ws.getCell(`G${row}`), rightBold11);
-                if (val.fp) { ws.getCell(`H${row}`).value = val.fp; Object.assign(ws.getCell(`H${row}`), centerPlain12); }
-                if (val.kh) { ws.getCell(`I${row}`).value = val.kh; Object.assign(ws.getCell(`I${row}`), centerPlain12); }
-                if (val.pk) { ws.getCell(`J${row}`).value = val.pk; Object.assign(ws.getCell(`J${row}`), centerPlain12); }
+                ws.getCell(`G${row}`).value = name;      styleCell(ws.getCell(`G${row}`), { bold: true, size: 11, align: 'right' });
+                if (val.fp) { ws.getCell(`H${row}`).value = val.fp; styleCell(ws.getCell(`H${row}`), { bold: false, size: 12, align: 'center' }); }
+                if (val.kh) { ws.getCell(`I${row}`).value = val.kh; styleCell(ws.getCell(`I${row}`), { bold: false, size: 12, align: 'center' }); }
+                if (val.pk) { ws.getCell(`J${row}`).value = val.pk; styleCell(ws.getCell(`J${row}`), { bold: false, size: 12, align: 'center' }); }
             });
 
             const buffer = await workbook.xlsx.writeBuffer();
@@ -1852,44 +1856,110 @@
             document.body.removeChild(link);
         }
 
-        function exportDailyDetailedToExcel() {
+        async function exportDailyDetailedToExcel() {
             const targets = localDailyTargets.filter(t => t.date === activeDate);
             if (targets.length === 0) {
                 alert("Pro tento vybraný den neexistují žádná zadaná data svozu k exportu.");
                 return;
             }
 
-            let csvContent = "\ufeff";
-            csvContent += "MĚŘENÍ ODBĚRU - DETAILNÍ DENNÍ SVOD: " + formatDateToCzech(activeDate) + "\n\n";
-            csvContent += "Zákazník;Plán FP;Plán KH;Plán PK;Řidič (nakládka);Odvezeno FP;Odvezeno KH;Odvezeno PK;Čas zápisu\n";
-
+            // Sestavení řádků detailu (jeden řádek na řidiče/nakládku, stejně jako ve vzoru)
+            const detailRows = [];
             targets.forEach(t => {
                 const tPickups = localPickups.filter(p => p.targetId === t.id);
                 if (tPickups.length === 0) {
-                    csvContent += `${t.customer};${t.targetFP};${t.targetKH};${t.targetPK || 0};-;0;0;0;-\n`;
+                    detailRows.push({
+                        customer: t.customer, planFP: t.targetFP, planKH: t.targetKH, planPK: t.targetPK || 0,
+                        driver: '-', fp: 0, kh: 0, pk: 0, time: null
+                    });
                 } else {
                     tPickups.forEach(p => {
-                        const timeStr = p.timestamp ? new Date(p.timestamp).toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' }) : '-';
-                        csvContent += `${t.customer};${t.targetFP};${t.targetKH};${t.targetPK || 0};${p.driver};${p.fp};${p.kh};${p.pk || 0};${timeStr}\n`;
+                        detailRows.push({
+                            customer: t.customer, planFP: t.targetFP, planKH: t.targetKH, planPK: t.targetPK || 0,
+                            driver: p.driver, fp: p.fp, kh: p.kh, pk: p.pk || 0,
+                            time: p.timestamp ? new Date(p.timestamp) : null
+                        });
                     });
                 }
             });
 
             const dayTrailers = localTrailerPlans.filter(p => p.date === activeDate);
+
+            const workbook = new ExcelJS.Workbook();
+            const ws = workbook.addWorksheet('in');
+
+            // Šířky sloupců podle vzoru (A–I)
+            ws.getColumn('A').width = 22;
+            ws.getColumn('B').width = 10;
+            ws.getColumn('C').width = 10;
+            ws.getColumn('D').width = 10;
+            ws.getColumn('E').width = 22;
+            ws.getColumn('F').width = 12;
+            ws.getColumn('G').width = 12;
+            ws.getColumn('H').width = 12;
+            ws.getColumn('I').width = 12;
+
+            // Řádek 1 – hlavní nadpis
+            ws.getCell('A1').value = `MĚŘENÍ ODBĚRU - DETAILNÍ DENNÍ SVOD: ${formatDateToCzech(activeDate)}`;
+            ws.getCell('A1').font = { bold: true, size: 12 };
+
+            // Řádek 3 – hlavička detailní tabulky
+            const detailHeaders = ['Zákazník', 'Plán FP', 'Plán KH', 'Plán PK', 'Řidič (nakládka)', 'Odvezeno FP', 'Odvezeno KH', 'Odvezeno PK', 'Čas zápisu'];
+            detailHeaders.forEach((h, i) => {
+                const cell = ws.getCell(3, i + 1);
+                cell.value = h;
+                cell.font = { bold: true };
+            });
+
+            // Data – od řádku 4
+            detailRows.forEach((r, i) => {
+                const row = 4 + i;
+                ws.getCell(`A${row}`).value = r.customer;
+                ws.getCell(`B${row}`).value = r.planFP;
+                ws.getCell(`C${row}`).value = r.planKH;
+                ws.getCell(`D${row}`).value = r.planPK;
+                ws.getCell(`E${row}`).value = r.driver;
+                ws.getCell(`F${row}`).value = r.fp;
+                ws.getCell(`G${row}`).value = r.kh;
+                ws.getCell(`H${row}`).value = r.pk;
+                if (r.time) {
+                    ws.getCell(`I${row}`).value = r.time;
+                    ws.getCell(`I${row}`).numFmt = 'h:mm';
+                } else {
+                    ws.getCell(`I${row}`).value = '-';
+                }
+            });
+
+            // Sekce návěsů, oddělená dvěma prázdnými řádky za posledním datovým řádkem
             if (dayTrailers.length > 0) {
-                csvContent += "\n\nDENNÍ PLÁNY NASAZENÍ NÁVĚSŮ (33 EUR)\n";
-                csvContent += "Řidič návěsu;SPZ Návěsu;Přidělené Rozvozy;Přidělené Svozy\n";
-                dayTrailers.forEach(p => {
+                const trailerTitleRow = 4 + detailRows.length + 2;
+                ws.getCell(`A${trailerTitleRow}`).value = 'DENNÍ PLÁNY NASAZENÍ NÁVĚSŮ (33 EUR)';
+                ws.getCell(`A${trailerTitleRow}`).font = { bold: true };
+
+                const trailerHeaderRow = trailerTitleRow + 1;
+                const trailerHeaders = ['Řidič návěsu', 'SPZ Návěsu', 'Přidělené Rozvozy', 'Přidělené Svozy'];
+                trailerHeaders.forEach((h, i) => {
+                    const cell = ws.getCell(trailerHeaderRow, i + 1);
+                    cell.value = h;
+                    cell.font = { bold: true };
+                });
+
+                dayTrailers.forEach((p, i) => {
+                    const row = trailerHeaderRow + 1 + i;
                     const deliveriesStr = p.deliveries && p.deliveries.length > 0 ? p.deliveries.join(", ") : "-";
                     const pickupsStr = p.pickups && p.pickups.length > 0 ? p.pickups.join(", ") : "-";
-                    csvContent += `${p.driver};${p.spz || "BEZ SPZ"};${deliveriesStr};${pickupsStr}\n`;
+                    ws.getCell(`A${row}`).value = p.driver;
+                    ws.getCell(`B${row}`).value = p.spz || "BEZ SPZ";
+                    ws.getCell(`C${row}`).value = deliveriesStr;
+                    ws.getCell(`D${row}`).value = pickupsStr;
                 });
             }
 
-            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.download = `geis_svoz_den_${activeDate}.csv`;
+            link.download = `geis_svoz_den_${activeDate}.xlsx`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
