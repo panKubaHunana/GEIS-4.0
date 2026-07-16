@@ -100,42 +100,33 @@
 
     <!-- Záhlaví s kalendářem -->
     <header class="bg-white text-slate-900 p-3 shadow-md sticky top-0 z-20 border-b-4 border-[#003366] flex flex-col gap-2">
-        <div class="flex justify-between items-center gap-2">
-            <div class="flex items-center gap-2.5 min-w-0">
-                <img src="geis-logo.png" alt="Geis Logo" class="h-8 w-auto object-contain shrink-0" onerror="this.style.display='none'">
-                <div class="leading-tight min-w-0">
-                    <div class="flex items-center gap-2">
-                        <h1 class="text-xs font-black tracking-tight text-[#003366] uppercase">Geis Svozy</h1>
-                        <button onclick="toggleDarkMode()" class="text-gray-500 hover:text-[#003366] focus:outline-none" title="Přepnout tmavý/světlý režim">
-                            <svg id="themeIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
-                            </svg>
-                        </button>
-                    </div>
-                    <p class="text-[9px] text-slate-500 font-bold uppercase tracking-wider truncate cursor-pointer hover:text-[#003366] active:scale-95 transition-transform" 
-                       id="currentDateDisplay" onclick="jumpToToday()" title="Skočit na dnešek"></p>
+        <!-- Datum přes celou šířku (klik = skok na dnešek) -->
+        <p class="text-[9px] text-slate-500 font-bold uppercase tracking-wider truncate cursor-pointer hover:text-[#003366] active:scale-95 transition-transform"
+           id="currentDateDisplay" onclick="jumpToToday()" title="Skočit na dnešek"></p>
+
+        <div class="flex justify-between items-start gap-2">
+            <!-- Velké logo -->
+            <img src="geis-logo.png" alt="Geis Logo" class="h-20 w-auto object-contain shrink-0" onerror="this.style.display='none'">
+
+            <!-- Ovládání kalendáře + vyhledávání, napravo pod sebou -->
+            <div class="flex flex-col items-end gap-2 shrink-0">
+                <div id="headerDateControls" class="flex items-center gap-1">
+                    <button onclick="stepDate(-1)" class="w-8 h-8 flex items-center justify-center bg-white active:bg-gray-200 border border-gray-300 rounded text-xs font-bold text-slate-700 shadow-sm transition-colors">◀</button>
+                    <input type="date" id="appDatePicker" onchange="setDate(this.value)" class="h-8 text-[11px] font-bold text-[#003366] dark:text-blue-300 border border-gray-300 rounded px-1.5 bg-white dark:bg-slate-850 text-center focus:outline-none shadow-sm cursor-pointer w-[100px] sm:w-[115px]">
+                    <button onclick="stepDate(1)" class="w-8 h-8 flex items-center justify-center bg-white active:bg-gray-200 border border-gray-300 rounded text-xs font-bold text-slate-700 shadow-sm transition-colors">▶</button>
+                </div>
+
+                <!-- Globální vyhledávací pole -->
+                <div class="relative w-52" id="globalSearchContainer">
+                    <input type="text" id="globalDriverSearch" oninput="performGlobalDriverSearch(this.value)" placeholder="VYHLEDAT ŘIDIČE" class="w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg py-1.5 px-3 pr-8 text-[11px] font-bold outline-none focus:border-[#003366] uppercase text-[#003366] dark:text-blue-300 placeholder-gray-500 shadow-sm">
+                    <span class="absolute right-2.5 top-2.5 text-gray-500">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </span>
+
+                    <!-- Plovoucí karta výsledků vyhledávání -->
+                    <div id="globalSearchResults" class="absolute right-0 top-11 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-300 p-3 max-w-sm w-72 hidden z-30"></div>
                 </div>
             </div>
-
-            <!-- Kompaktní ovládání kalendáře (čistě světlé) -->
-            <div id="headerDateControls" class="flex items-center gap-1 shrink-0">
-                <button onclick="stepDate(-1)" class="w-8 h-8 flex items-center justify-center bg-white active:bg-gray-200 border border-gray-300 rounded text-xs font-bold text-slate-700 shadow-sm transition-colors">◀</button>
-                <input type="date" id="appDatePicker" onchange="setDate(this.value)" class="h-8 text-[11px] font-bold text-[#003366] dark:text-blue-300 border border-gray-300 rounded px-1.5 bg-white dark:bg-slate-850 text-center focus:outline-none shadow-sm cursor-pointer w-[100px] sm:w-[115px]">
-                <button onclick="stepDate(1)" class="w-8 h-8 flex items-center justify-center bg-white active:bg-gray-200 border border-gray-300 rounded text-xs font-bold text-slate-700 shadow-sm transition-colors">▶</button>
-            </div>
-        </div>
-
-        <!-- Globální vyhledávací pole (čistě bílé) -->
-        <div class="flex justify-end p-2 bg-white border-b border-gray-200 relative dark:bg-slate-900 dark:border-slate-800" id="globalSearchContainer">
-            <div class="relative w-52">
-                <input type="text" id="globalDriverSearch" oninput="performGlobalDriverSearch(this.value)" placeholder="VYHLEDAT ŘIDIČE" class="w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg py-1.5 px-3 pr-8 text-[11px] font-bold outline-none focus:border-[#003366] uppercase text-[#003366] dark:text-blue-300 placeholder-gray-500 shadow-sm">
-                <span class="absolute right-2.5 top-2.5 text-gray-500">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                </span>
-            </div>
-            
-            <!-- Plovoucí karta výsledků vyhledávání -->
-            <div id="globalSearchResults" class="absolute right-4 top-11 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-300 p-3 max-w-sm w-72 hidden z-30"></div>
         </div>
     </header>
 
@@ -412,7 +403,7 @@
                         </button>
                     </div>
                 </div>
-                <div id="settingsCustomerCardsList" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
+                <div id="settingsCustomerCardsList" class="space-y-2 pr-1"></div>
             </div>
         </details>
 
