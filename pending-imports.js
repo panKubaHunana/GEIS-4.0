@@ -155,6 +155,8 @@
         var targets = (typeof localDailyTargets !== 'undefined') ? localDailyTargets : [];
         var today = (typeof activeDate !== 'undefined') ? activeDate : '';
 
+        // Apps Script posila do appky jen objednavky na dnesek (e-maily s jinym datem jsou
+        // jen avizo a ignoruji se uz na strane scriptu), takze tady ukazujeme vsechny navrhy.
         var sorted = localPendingImports.slice().sort(function (a, b) {
             return (a.createdAt || '').localeCompare(b.createdAt || '');
         });
@@ -247,6 +249,9 @@
         var el = document.getElementById('pi-body-' + docId);
         if (el) el.classList.toggle('hidden');
     };
+
+    // Umožní index.html překreslit panel (např. při změně data).
+    window.pendingImportsRefresh = function () { renderPendingImports(); };
 
     window.pendingImportsReject = function (docId) {
         if (confirm('Opravdu zamítnout tento návrh objednávky? Nebude se dát vrátit zpět (Apps Script ho znovu nepošle, protože e-mail už je označen jako zpracovaný).')) {
