@@ -1,11 +1,12 @@
-const CACHE_NAME = 'sw-v50';
+const CACHE_NAME = 'sw-v53';
 
 // Relativní cesty zajišťují kompatibilitu na jakékoliv doméně/složce na GitHubu
 const urlsToCache = [
   './',
   'index.html',
   'manifest.json',
-  'style.css'
+  'style.css',
+  'icon-192.png'
 ];
 
 // Instalace a uložení nezbytných souborů do paměti (cache)
