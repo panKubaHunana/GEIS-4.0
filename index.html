@@ -94,9 +94,55 @@
         body.dark .text-gray-500 {
             color: #94a3b8;
         }
+
+        /* Úvodní obrazovka (splash) - zobrazí se hned při spuštění, než se vše načte.
+           Používá jen vlastní CSS (ne Tailwind), aby se ukázala okamžitě. */
+        #splashScreen {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.45s ease;
+        }
+        #splashScreen.hide {
+            opacity: 0;
+            pointer-events: none;
+        }
+        #splashLogo {
+            width: 45%;
+            max-width: 240px;
+            height: auto;
+            animation: splashPulse 1.4s ease-in-out infinite;
+        }
+        @keyframes splashPulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(0.94); opacity: 0.7; }
+        }
     </style>
 </head>
 <body class="bg-gray-100 font-sans antialiased text-gray-900">
+
+    <!-- Úvodní obrazovka s logem (zmizí, jakmile je appka načtená) -->
+    <div id="splashScreen">
+        <img src="icon-192.png" alt="Geis" id="splashLogo" onerror="this.onerror=null;this.src='geis-logo.png'">
+    </div>
+    <script>
+        (function () {
+            function hideSplash() {
+                var s = document.getElementById('splashScreen');
+                if (!s || s.classList.contains('hide')) return;
+                s.classList.add('hide');
+                setTimeout(function () { if (s) s.style.display = 'none'; }, 500);
+            }
+            // Skryjeme po úplném načtení stránky (s krátkou prodlevou, ať logo problikne)...
+            window.addEventListener('load', function () { setTimeout(hideSplash, 500); });
+            // ...a pojistka: splash zmizí nejpozději po 5 sekundách, ať nikdy nezůstane viset.
+            setTimeout(hideSplash, 5000);
+        })();
+    </script>
 
     <!-- Záhlaví s kalendářem -->
     <header class="bg-white text-slate-900 p-3 shadow-md sticky top-0 z-20 border-b-4 border-[#003366] flex flex-col gap-2">
@@ -842,6 +888,8 @@
             populateAllDropdowns();
             renderCounterTab();
             renderTrailersTab();
+            // Po změně data překreslíme i panel "Nové objednávky z e-mailu" (v pending-imports.js).
+            if (window.pendingImportsRefresh) window.pendingImportsRefresh();
         }
 
         // Univerzální uložení souboru: na iOS/PWA se otevře Share Sheet (Uložit do Souborů,
