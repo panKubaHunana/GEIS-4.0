@@ -699,7 +699,7 @@
         const db = firebase.firestore();
 
         const defaultCustomers = ["WIMEX","ALBI","DRANA","V-GARDEN","GARLAND","HP TRONIC","SHIPMALL","KRPA","TAMADEX","Z-TRADE","HOBRA ŠKOLNÍK","PENTA","FOMEI","SKOLIL KOMPOZIT","VETRO-PLUS","HR.PEKÁRNA","VOR","ITADECO","MEKR´S","SECO","COROLL","DETECHA","NUTRICIUS","KOMAP","ELPRIM","FANTON","TCM POINT","HORNBACH"];
-        const defaultDrivers = ["KRČMÁŘ LUKÁŠ","BUCEK DOMINIK","DUŽDA ŠTEFAN","POSTOLKA JAKUB","POLEDNO PATRIK","HRNČÍŘ LUKÁŠ","VIDA JAROSLAV","ROZSYPAL JIŘÍ","MAREŠ FRANTIŠEK","MUZIKÁŘ MARTIN","KŘÍŽ ONDŘEJ","BÁRTA JAROSLAV","PARTEL MIROSLAV","MRÁZEK DALIBOR","MATOUŠEK JOSEF","ZEMAN MAREK","ŠMŮLA RUDOLF","MEZEIOVÁ PAVLA","CHUKHALENKO ANDRII","RAFAEL JAN","KOVALČÍK PAVEL","BÖHM PETR","HOLUB FRANTIŠEK","ZEMAN ROMAN","MOROZ EVŽEN","KINDA KAREL","RICHTER ERIK","HAVEL ROMAN","DAVID VLADIMÍR","DRAPÁK PETR","DVOŘÁK MIROSLAV","BAŽANT MARTIN","DOLEŽAL PETR","DANIHELKA FRANTIŠEK","KUBÍČEK JAROSLAV","KLEIN JOZEF","VAŇÁTKO ROBERT","VILÍMOVSKÝ DAVID","TĚŠÍNSKÝ VÍT","ŠPIČKA RADEK","VRABEC JIŘÍ","KOCOUREK MICHAL","SKUHROVEC STANISLAV"];
+        const defaultDrivers = ["KINDA","DVOŘÁK","PUTERKA","VRABEC","DOLEŽAL","KŘÍŽ","DUŽDA","VAŇÁTKO","DAVID","BAŽANT","KLEIN","PARTEL","SVYATYLO","HAVEL","KOCOUREK","DRAPÁK","RICHTER","BÁRTA"];
 
         const defaultCarriers = [
             "AUTODOPRAVA ŽÍDEK", "ŠTĚPÁN STIX", "LIBOR RYND", "GEIS CZ", 
@@ -732,8 +732,6 @@
         let _settingsLoaded = false, _cardsLoaded = false, _migrationDone = false, _customersMigrated = false;
         // Jednorázové přejmenování karet zákazníků na přesné názvy
         let _cardRenamesDone = false, _cardRenamesFlag = false;
-        // Jednorázová obnova seznamu řidičů (po nechtěném resetu na výchozí)
-        let _driverRosterDone = false, _driverRosterFlag = false;
 
         // Vrátí seřazený seznam UNIKÁTNÍCH jmen zákazníků z Karet zákazníka (velkými písmeny).
         function getCustomerCardNames() {
@@ -800,28 +798,6 @@
             // Příznak, aby přejmenování proběhlo jen jednou.
             db.collection("settings").doc("_meta").set({ cardRenamesV1Done: true }, { merge: true })
                 .catch(e => console.error('Uložení příznaku přejmenování selhalo:', e));
-        }
-
-        // Jednorázově DOPLNÍ do seznamu řidičů všechna jména z rosteru (defaultDrivers),
-        // která tam ještě nejsou. Nic nepřepisuje ani nemaže - jen přidává chybějící.
-        // Spustí se jen jednou (příznak settings/_meta.driverRosterV2). Když bude potřeba
-        // roster znovu doplnit (další noví řidiči), stačí zvýšit číslo verze (V3...).
-        function tryApplyDriverRoster() {
-            if (_driverRosterDone || _driverRosterFlag) return;
-            if (!_settingsLoaded) return;
-            _driverRosterDone = true;
-
-            const current = JSON.parse(localStorage.getItem('drivers') || '[]') || [];
-            const merged = current.slice();
-            defaultDrivers.forEach(function (n) { if (merged.indexOf(n) === -1) merged.push(n); });
-
-            // Když už tam všechna jména jsou, nemusíme nic zapisovat (jen si poznamenáme příznak).
-            if (merged.length !== current.length) {
-                db.collection("settings").doc("drivers").set({ list: merged })
-                    .catch(function (e) { console.error('Doplnění seznamu řidičů selhalo:', e); });
-            }
-            db.collection("settings").doc("_meta").set({ driverRosterV2: true }, { merge: true })
-                .catch(function (e) { console.error('Uložení příznaku rosteru selhalo:', e); });
         }
 
         // Dark Mode logika, která synchronizuje Tailwind i vlastní styl
@@ -912,8 +888,6 @@
             populateAllDropdowns();
             renderCounterTab();
             renderTrailersTab();
-            // Po změně data překreslíme i panel "Nové objednávky z e-mailu" (v pending-imports.js).
-            if (window.pendingImportsRefresh) window.pendingImportsRefresh();
         }
 
         // Univerzální uložení souboru: na iOS/PWA se otevře Share Sheet (Uložit do Souborů,
@@ -1090,7 +1064,6 @@
                     const meta = doc.data() || {};
                     _customersMigrated = !!meta.customersMigratedToCards;
                     _cardRenamesFlag = !!meta.cardRenamesV1Done;
-                    _driverRosterFlag = !!meta.driverRosterV2;
                     return;
                 }
                 localStorage.setItem(doc.id, JSON.stringify(doc.data().list || []));
@@ -1101,7 +1074,6 @@
             renderDriversTab();
             tryMigrateCustomers();
             tryRenameCustomerCards();
-            tryApplyDriverRoster();
         });
 
         db.collection("dailyTargets").onSnapshot((snapshot) => {
