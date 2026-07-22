@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Geis - Dispečink Svozů</title>
-    <link class="apple-touch-icon" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="style.css">
     
@@ -698,8 +698,48 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        const defaultCustomers = ["WIMEX","ALBI","DRANA","V-GARDEN","GARLAND","HP TRONIC","SHIPMALL","KRPA","TAMADEX","Z-TRADE","HOBRA ŠKOLNÍK","PENTA","FOMEI","SKOLIL KOMPOZIT","VETRO-PLUS","HR.PEKÁRNA","VOR","ITADECO","MEKR´S","SECO","COROLL","DETECHA","NUTRICIUS","KOMAP","ELPRIM","FANTON","TCM POINT","HORNBACH"];
-        const defaultDrivers = ["KINDA","DVOŘÁK","PUTERKA","VRABEC","DOLEŽAL","KŘÍŽ","DUŽDA","VAŇÁTKO","DAVID","BAŽANT","KLEIN","PARTEL","SVYATYLO","HAVEL","KOCOUREK","DRAPÁK","RICHTER","BÁRTA"];
+        // ====================================================================
+        //  VÝCHOZÍ ČÍSELNÍKY (verze 4.1 – 22.7.2026)
+        //  Zákazníci = firmy, od kterých chodí pravidelné objednávky svozu.
+        //  Ke každému je i e-mail, ze kterého objednávka chodí – ten se použije
+        //  při automatickém rozpoznání zákazníka z e-mailu (pending-imports.js).
+        // ====================================================================
+        const DEFAULT_PICKUP_CUSTOMERS = [
+            { name: "ABICOR BINZEL",     email: "vankova@abicor.cz" },
+            { name: "ALBI",              email: "zasilky@albi.cz" },
+            { name: "CYKLOMAX",          email: "leos.kucera@cyklomax.cz" },
+            { name: "ČEMAT",             email: "winter@wiba.cz" },
+            { name: "DETECHA",           email: "volhejn@detecha.cz" },
+            { name: "FANTON",            email: "obchod@fanton.cz" },
+            { name: "GEKKON",            email: "h.kralova@gekkon.org" },
+            { name: "HOBRA ŠKOLNÍK",     email: "kunart.katarzyna@hobra.cz" },
+            { name: "HP TRONIC",         email: "jaroslav.prat@hptronic.cz" },
+            { name: "HRADECKÁ PEKÁRNA",  email: "paletovyprodej@hradeckapekarna.cz" },
+            { name: "ITADECO",           email: "k.kalenska@itadeco.cz" },
+            { name: "KRPA",              email: "expedice@krpa.cz" },
+            { name: "LA LINEA",          email: "lenka.vonkova@lalinea.cz" },
+            { name: "LI-CA",             email: "sklad@li-ca.cz" },
+            { name: "LPW PRODEJNÍ",      email: "sklad@lpw.cz" },
+            { name: "NUTRICIUS",         email: "marketa.nutricius@email.cz" },
+            { name: "PENTA",             email: "malkova@pentaservis.cz" },
+            { name: "SHIPMALL",          email: "logistika@shipmall.cz" },
+            { name: "STRIX",             email: "info@strixhorice.cz" },
+            { name: "VOR",               email: "baliky@vorcz.cz" }
+        ];
+
+        const defaultCustomers = DEFAULT_PICKUP_CUSTOMERS.map(c => c.name);
+
+        const defaultDrivers = [
+            "BÁRTA JAROSLAV","BAŽANT MARTIN","BÖHM PETR","BUCEK DOMINIK","CHUKHALENKO ANDRII",
+            "DANIHELKA FRANTIŠEK","DAVID VLADIMÍR","DOLEŽAL PETR","DRAPÁK PETR","DUŽDA ŠTEFAN",
+            "DVOŘÁK MIROSLAV","HAVEL ROMAN","HOLUB FRANTIŠEK","HRNČÍŘ LUKÁŠ","KINDA KAREL",
+            "KLEIN JOZEF","KOCOUREK MICHAL","KOVALČÍK PAVEL","KRČMÁŘ LUKÁŠ","KŘÍŽ ONDŘEJ",
+            "KUBÍČEK JAROSLAV","MAREŠ FRANTIŠEK","MATOUŠEK JOSEF","MEZEIOVÁ PAVLA","MOROZ EVŽEN",
+            "MRÁZEK DALIBOR","MUZIKÁŘ MARTIN","PARTEL MIROSLAV","POLEDNO PATRIK","POSTOLKA JAKUB",
+            "RAFAEL JAN","RICHTER ERIK","ROZSYPAL JIŘÍ","SKUHROVEC STANISLAV","ŠMŮLA RUDOLF",
+            "ŠPIČKA RADEK","TĚŠÍNSKÝ VÍT","VAŇÁTKO ROBERT","VIDA JAROSLAV","VILÍMOVSKÝ DAVID",
+            "VRABEC JIŘÍ","ZEMAN MAREK","ZEMAN ROMAN"
+        ];
 
         const defaultCarriers = [
             "AUTODOPRAVA ŽÍDEK", "ŠTĚPÁN STIX", "LIBOR RYND", "GEIS CZ", 
@@ -732,6 +772,8 @@
         let _settingsLoaded = false, _cardsLoaded = false, _migrationDone = false, _customersMigrated = false;
         // Jednorázové přejmenování karet zákazníků na přesné názvy
         let _cardRenamesDone = false, _cardRenamesFlag = false;
+        // Jednorázové nasazení výchozích číselníků verze 4.1 (zákazníci + řidiči)
+        let _defaultsV2Done = false, _defaultsV2Flag = false;
 
         // Vrátí seřazený seznam UNIKÁTNÍCH jmen zákazníků z Karet zákazníka (velkými písmeny).
         function getCustomerCardNames() {
@@ -798,6 +840,50 @@
             // Příznak, aby přejmenování proběhlo jen jednou.
             db.collection("settings").doc("_meta").set({ cardRenamesV1Done: true }, { merge: true })
                 .catch(e => console.error('Uložení příznaku přejmenování selhalo:', e));
+        }
+
+        // ====================================================================
+        //  JEDNORÁZOVÉ NASAZENÍ VÝCHOZÍCH ČÍSELNÍKŮ (verze 4.1)
+        //  – Řidiči: seznam se NAHRADÍ novým výchozím seznamem (43 jmen).
+        //  – Zákazníci: chybějící Karty zákazníka se DOPLNÍ (nic se nemaže),
+        //    u existujících karet se doplní jen prázdný e-mail.
+        //  Proběhne jen jednou na celý účet (příznak settings/_meta).
+        //  Chceš-li to spustit znovu (např. po ručním pokusu), smaž v databázi
+        //  pole "defaultsV2Done" v dokumentu settings/_meta.
+        // ====================================================================
+        function trySeedDefaultsV2() {
+            if (_defaultsV2Done || _defaultsV2Flag) return;
+            if (!_settingsLoaded || !_cardsLoaded) return;
+            _defaultsV2Done = true;
+
+            // 1) Řidiči – nahradit výchozím seznamem
+            db.collection("settings").doc("drivers").set({ list: defaultDrivers })
+                .catch(e => console.error('Uložení výchozích řidičů selhalo:', e));
+
+            // 2) Zákazníci – doplnit chybějící karty (+ e-maily)
+            const byName = {};
+            (localCustomerCards || []).forEach(c => {
+                const key = (c.name || '').toUpperCase().trim();
+                if (key && !byName[key]) byName[key] = c;
+            });
+
+            DEFAULT_PICKUP_CUSTOMERS.forEach((def, i) => {
+                const nameU = def.name.toUpperCase().trim();
+                const card = byName[nameU];
+                if (!card) {
+                    const id = (Date.now() + i).toString();
+                    db.collection("customerCards").doc(id).set({
+                        id: id, name: nameU, address: '', contact: '', phone: '', email: def.email
+                    }).catch(e => console.error('Založení karty zákazníka selhalo:', e));
+                } else if (!(card.email || '').trim() && def.email) {
+                    const key = card.id || card.docId;
+                    if (key) db.collection("customerCards").doc(key).update({ email: def.email })
+                        .catch(e => console.error('Doplnění e-mailu zákazníka selhalo:', e));
+                }
+            });
+
+            db.collection("settings").doc("_meta").set({ defaultsV2Done: true }, { merge: true })
+                .catch(e => console.error('Uložení příznaku výchozích číselníků selhalo:', e));
         }
 
         // Dark Mode logika, která synchronizuje Tailwind i vlastní styl
@@ -1064,6 +1150,7 @@
                     const meta = doc.data() || {};
                     _customersMigrated = !!meta.customersMigratedToCards;
                     _cardRenamesFlag = !!meta.cardRenamesV1Done;
+                    _defaultsV2Flag = !!meta.defaultsV2Done;
                     return;
                 }
                 localStorage.setItem(doc.id, JSON.stringify(doc.data().list || []));
@@ -1074,6 +1161,7 @@
             renderDriversTab();
             tryMigrateCustomers();
             tryRenameCustomerCards();
+            trySeedDefaultsV2();
         });
 
         db.collection("dailyTargets").onSnapshot((snapshot) => {
@@ -1125,6 +1213,7 @@
             _cardsLoaded = true;
             tryMigrateCustomers();
             tryRenameCustomerCards();
+            trySeedDefaultsV2();
         });
 
         function populateAllDropdowns() {

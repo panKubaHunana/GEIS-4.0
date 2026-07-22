@@ -1,0 +1,9 @@
+# pracovní a dočasné soubory
+_test/
+_balicek/
+*.log
+Thumbs.db
+.DS_Store
+
+# zálohy dat z aplikace (obsahují provozní data, nepatří do repozitáře)
+geis_svozy_zaloha_*.json
