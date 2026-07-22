@@ -74,43 +74,10 @@
             .trim();
     }
 
-    // Presna tabulka: e-mailova adresa odesilatele -> presny nazev zakaznika v aplikaci.
-    // Klice jsou vzdy malymi pismeny (porovnani je case-insensitive). Tuto tabulku muzes
-    // kdykoli doplnit o dalsi radky ve tvaru 'adresa@firma.cz': 'NAZEV ZAKAZNIKA'.
-    var EMAIL_CUSTOMER_MAP = {
-        'paletovyprodej@hradeckapekarna.cz': 'HRADECKÁ PEKÁRNA',
-        'expedice@krpa.cz': 'KRPA',
-        'winter@wiba.cz': 'ČEMAT',
-        'jaroslav.prat@hptronic.cz': 'HP TRONIC',
-        'volhejn@detecha.cz': 'DETECHA',
-        'objednavky@drana.cz': 'DRANA',
-        'expedice@fomei.com': 'FOMEI',
-        'k.kalenska@itadeco.cz': 'ITADECO',
-        'info@strixhorice.cz': 'STRIX',
-        'obchod@fanton.cz': 'FANTON',
-        'leos.kucera@cyklomax.cz': 'CYKLOMAX',
-        'h.kralova@gekkon.org': 'GEKKON',
-        'baliky@vorcz.cz': 'VOR',
-        'logistika@shipmall.cz': 'SHIPMALL',
-        'malkova@pentaservis.cz': 'PENTA',
-        'sklad@li-ca.cz': 'LI-CA',
-        'vankova@abicor.cz': 'ABICOR BINZEL'
-    };
-
-    // Zkusi najit zakaznika. NEJDRIV podle presne tabulky EMAIL_CUSTOMER_MAP (nejspolehlivejsi),
-    // az potom podle jmena odesilatele NEBO domeny emailu (napr. "k.kalenska@itadeco.cz" -> "ITADECO").
-    // Neni-li jiste, vraci null a dispecer si zakaznika jednoduse vybere sam z rozbalovaci nabidky.
+    // Zkusi najit zakaznika ze seznamu podle jmena odesilatele NEBO domeny emailu
+    // (napr. "k.kalenska@itadeco.cz" -> "ITADECO"). Neni-li jiste, vraci null a
+    // dispecer si zakaznika jednoduse vybere sam z rozbalovaci nabidky.
     function fuzzyMatchCustomer(name, email, list) {
-        // 1) Presna shoda podle e-mailove adresy
-        var mapped = EMAIL_CUSTOMER_MAP[(email || '').toLowerCase().trim()];
-        if (mapped) {
-            for (var m = 0; m < list.length; m++) {
-                if (normalize(list[m]) === normalize(mapped)) return list[m];
-            }
-            // I kdyby zakaznik jeste nemel kartu, vratime aspon presny nazev.
-            return mapped;
-        }
-
         var n = normalize(name);
         var domain = ((email || '').split('@')[1] || '').split('.')[0];
         var d = normalize(domain);
@@ -146,17 +113,10 @@
             return;
         }
 
-        // Zákazníci teď vychází z Karet zákazníka (sjednocený seznam), ne ze starého 'customersPickup'.
-        var custPickup = sortAlpha(
-            JSON.parse(localStorage.getItem('customerCards') || '[]')
-                .map(function (c) { return c && c.name ? String(c.name).toUpperCase() : ''; })
-                .filter(function (n) { return !!n; })
-        );
+        var custPickup = sortAlpha(JSON.parse(localStorage.getItem('customersPickup') || '[]'));
         var targets = (typeof localDailyTargets !== 'undefined') ? localDailyTargets : [];
         var today = (typeof activeDate !== 'undefined') ? activeDate : '';
 
-        // Apps Script posila do appky jen objednavky na dnesek (e-maily s jinym datem jsou
-        // jen avizo a ignoruji se uz na strane scriptu), takze tady ukazujeme vsechny navrhy.
         var sorted = localPendingImports.slice().sort(function (a, b) {
             return (a.createdAt || '').localeCompare(b.createdAt || '');
         });
@@ -181,12 +141,7 @@
             html += '' +
                 '<div id="pi-row-' + esc(p.docId) + '" data-date="' + esc(rowDate) + '" class="bg-white rounded-lg border border-amber-200 p-3 space-y-2 shadow-sm">' +
                 '  <div class="text-[10px] text-gray-500">Od: <b>' + esc(p.customer || '-') + '</b> (' + esc(p.sourceEmail || '-') + ') &middot; ' + esc(rowDate) + '</div>' +
-                ((p.needsReview || (!p.fp && !p.kh && !p.pk)) ? '  <div class="text-[10px] font-bold text-amber-800 bg-amber-100 border border-amber-300 rounded px-2 py-1">⚠️ Množství se nepodařilo rozpoznat – doplňte FP/KH/PK ručně (nebo objednávku zamítněte). Nápověda: otevřete tělo e-mailu níže.</div>' : '') +
                 (p.sourceSnippet ? '  <div class="text-[10px] text-gray-400 italic truncate" title="' + esc(p.sourceSnippet) + '">' + esc(p.sourceSnippet) + '</div>' : '') +
-                (p.sourceBody ?
-                    '  <button type="button" onclick="pendingImportsToggleBody(\'' + esc(p.docId) + '\')" class="text-[10px] font-bold text-[#003366] underline">🔍 Zobrazit / skrýt e-mail</button>' +
-                    '  <div id="pi-body-' + esc(p.docId) + '" class="hidden mt-1 text-[10px] text-gray-600 dark:text-gray-300 bg-gray-50 border border-gray-200 rounded p-2 whitespace-pre-wrap max-h-40 overflow-y-auto">' + esc(p.sourceBody) + '</div>'
-                    : '') +
                 '  <div class="grid grid-cols-2 gap-2">' +
                 '    <select class="pi-customer col-span-2 w-full bg-white border border-gray-300 rounded-lg p-2 text-xs font-bold outline-none focus:border-[#003366] text-slate-800">' + options + '</select>' +
                 '    <div><label class="text-[9px] font-bold text-gray-400 uppercase">FP</label>' +
@@ -244,14 +199,6 @@
             }).then(finish).catch(function (e) { alert('Chyba při ukládání: ' + e.message); });
         }
     };
-
-    window.pendingImportsToggleBody = function (docId) {
-        var el = document.getElementById('pi-body-' + docId);
-        if (el) el.classList.toggle('hidden');
-    };
-
-    // Umožní index.html překreslit panel (např. při změně data).
-    window.pendingImportsRefresh = function () { renderPendingImports(); };
 
     window.pendingImportsReject = function (docId) {
         if (confirm('Opravdu zamítnout tento návrh objednávky? Nebude se dát vrátit zpět (Apps Script ho znovu nepošle, protože e-mail už je označen jako zpracovaný).')) {
