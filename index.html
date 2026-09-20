@@ -366,15 +366,15 @@
 
     <!-- Modální okno Karty řidiče -->
     <div id="driverCardModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
-        <div class="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-xl flex flex-col border border-gray-200">
-            <div class="bg-[#003366] p-4 text-white flex justify-between items-start border-b-4 border-[#002244]">
+        <div class="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-xl flex flex-col max-h-[90vh] border border-gray-200">
+            <div class="bg-[#003366] p-4 text-white flex justify-between items-start border-b-4 border-[#002244] shrink-0">
                 <div>
                     <h2 id="driverCardModalTitle" class="text-lg font-black leading-tight uppercase text-white">---</h2>
-                    <p class="text-xs text-slate-200 mt-0.5 font-medium">Karta řidiče</p>
+                    <p id="driverCardModalSubtitle" class="text-xs text-slate-200 mt-0.5 font-medium">Karta řidiče</p>
                 </div>
                 <button onclick="closeDriverCardModal()" class="bg-[#002244] hover:bg-[#001530] text-white rounded-full p-1.5 text-xs font-bold w-7 h-7 flex items-center justify-center transition-colors">✕</button>
             </div>
-            <div class="p-5 space-y-4" id="driverCardModalBody"></div>
+            <div class="p-5 space-y-4 overflow-y-auto flex-1" id="driverCardModalBody"></div>
         </div>
     </div>
 
@@ -753,6 +753,8 @@
         ].map(item => item.toUpperCase());
 
         let currentTargetId = null;
+        // Jméno řidiče, jehož karta je právě otevřená (kvůli živému přepočtu).
+        let currentDriverCardName = null;
         let currentGridFilter = 'all'; 
         let currentStatsPeriod = 'week';
         
@@ -1172,6 +1174,8 @@
             localStorage.setItem('dailyTargets', JSON.stringify(localDailyTargets));
             populateAllDropdowns();
             renderCounterTab();
+            renderDriversTab();                 // štítky s počty palet u řidičů
+            refreshDriverCardIfOpen();          // živý přepočet otevřené karty řidiče
         });
 
         db.collection("pickups").onSnapshot((snapshot) => {
@@ -1181,6 +1185,8 @@
             });
             localStorage.setItem('pickups', JSON.stringify(localPickups));
             renderCounterTab();
+            renderDriversTab();                 // štítky s počty palet u řidičů
+            refreshDriverCardIfOpen();          // živý přepočet otevřené karty řidiče
             if (currentTargetId) renderModalContent();
         });
 
@@ -1295,6 +1301,7 @@
                 grid.innerHTML = '<p class="col-span-full text-center text-xs text-gray-400 italic py-6">Zatím žádní řidiči. Přidejte je v Nastavení → Evidence řidičů.</p>';
                 return;
             }
+            const dayTotals = getDayLoadTotalsByDriver(activeDate);
             grid.innerHTML = drivers.map(d => {
                 const active = isDriverActive(d);
                 const safe = String(d).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
@@ -1303,9 +1310,23 @@
                     : 'bg-red-200 border-red-400 hover:bg-red-300';
                 const nameColor = active ? 'text-green-900' : 'text-red-900';
                 const stateColor = active ? 'text-green-700' : 'text-red-700';
+                // Štítek s výkonem za vybraný den – ťuknutím se otevře karta řidiče
+                // (event.stopPropagation, aby se omylem nepřepnul aktivní/neaktivní).
+                const tot = dayTotals[String(d).toUpperCase()];
+                let badge = '';
+                if (tot && (tot.fp || tot.kh || tot.pk)) {
+                    const parts = [];
+                    if (tot.fp) parts.push('FP ' + tot.fp);
+                    if (tot.kh) parts.push('KH ' + tot.kh);
+                    if (tot.pk) parts.push('PK ' + tot.pk);
+                    badge = '<div onclick="event.stopPropagation(); showDriverCard(\'' + safe + '\')" ' +
+                        'class="mt-1 text-[9px] font-black text-[#003366] bg-white/80 border border-white rounded px-1 py-0.5 leading-tight hover:bg-white" ' +
+                        'title="Zobrazit nakládky řidiče">' + parts.join(' · ') + '</div>';
+                }
                 return '<div onclick="toggleDriverActive(\'' + safe + '\')" class="cursor-pointer select-none rounded-lg p-2 text-center border transition-colors active:scale-95 ' + tile + '">' +
                     '<div class="text-[12px] font-black uppercase leading-tight ' + nameColor + '">' + d + '</div>' +
                     '<div class="text-[9px] font-bold uppercase tracking-wider ' + stateColor + '">' + (active ? 'aktivní' : 'neaktivní') + '</div>' +
+                    badge +
                     '</div>';
             }).join('');
         }
@@ -2504,6 +2525,215 @@
             }).join('');
         }
 
+        // ====================================================================
+        // PŘEHLED NAKLÁDEK ŘIDIČE V DANÉM DNI  (přidáno 21. 9. 2026)
+        // --------------------------------------------------------------------
+        // Karta řidiče nově ukazuje, u kterých zákazníků ve VYBRANÝ den (ten
+        // z horní lišty, ne nutně dnešek) nakládal a kolik palet odvezl.
+        //
+        // Data se NIKAM nezapisují a nic se nedočítá z Firestore – vše se
+        // počítá z už načtených polí localPickups + localDailyTargets:
+        //   localDailyTargets: { id, date, customer, targetFP, targetKH, targetPK }
+        //   localPickups:      { id, targetId, driver, fp, kh, pk, timestamp }
+        // Spojka mezi nimi je pickup.targetId -> target.id.
+        // ====================================================================
+
+        // Ošetření textu vkládaného do HTML (názvy firem mohou obsahovat & nebo ").
+        function escDC(v) {
+            return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+            });
+        }
+
+        // Číslo v českém formátu: 24.5 -> "24,5", 24 -> "24"
+        function fmtNumDC(n) {
+            const r = Math.round(Number(n) * 10) / 10;
+            return String(r).replace('.', ',');
+        }
+
+        // České skloňování: 1 zastávka / 2-4 zastávky / 5+ zastávek
+        function stopsWordDC(n) {
+            if (n === 1) return 'zastávka';
+            if (n >= 2 && n <= 4) return 'zastávky';
+            return 'zastávek';
+        }
+
+        // Kapacita vozidla se čte z textu na Kartě řidiče ("NÁVĚS 33 PAL." -> 33).
+        // Když tam číslo není (např. "JINÉ"), vrátí null a ukazatel vytížení se
+        // nezobrazí – radši nic než vymyšlené procento.
+        function parseVehicleCapacity(vehicleSize) {
+            if (!vehicleSize) return null;
+            const m = String(vehicleSize).match(/(\d+)\s*PAL/i);
+            if (!m) return null;
+            const n = parseInt(m[1], 10);
+            return (n > 0) ? n : null;
+        }
+
+        // Posbírá nakládky jednoho řidiče ve vybraný den, seskupené podle cíle
+        // svozu (jeden zákazník může mít v jednom dni i víc cílů).
+        // Vrací: { rows:[{targetId,customer,fp,kh,pk,ts}], totals, stops, units }
+        // "units" = přepočet na paletová místa (FP = 1, KH = 0,5, PK se nepočítá).
+        function getDriverDayLoadings(driverName, dateStr) {
+            const norm = String(driverName || '').trim().toUpperCase();
+            const empty = { rows: [], totals: { fp: 0, kh: 0, pk: 0 }, stops: 0, units: 0 };
+            if (!norm || !dateStr) return empty;
+
+            const targetById = {};
+            (localDailyTargets || []).forEach(t => {
+                if (t && t.date === dateStr) targetById[t.id] = t;
+            });
+
+            const groups = {};
+            (localPickups || []).forEach(p => {
+                if (!p || !p.targetId) return;
+                if (String(p.driver || '').trim().toUpperCase() !== norm) return;
+                const t = targetById[p.targetId];
+                if (!t) return;
+                if (!groups[p.targetId]) {
+                    groups[p.targetId] = {
+                        targetId: String(p.targetId),
+                        customer: t.customer || '—',
+                        fp: 0, kh: 0, pk: 0,
+                        ts: p.timestamp || ''
+                    };
+                }
+                const g = groups[p.targetId];
+                g.fp += Number(p.fp) || 0;
+                g.kh += Number(p.kh) || 0;
+                g.pk += Number(p.pk) || 0;
+                // Pořadí v seznamu = podle první nakládky u daného zákazníka.
+                if (p.timestamp && (!g.ts || String(p.timestamp) < String(g.ts))) g.ts = p.timestamp;
+            });
+
+            const rows = Object.keys(groups).map(k => groups[k])
+                .sort((a, b) => String(a.ts).localeCompare(String(b.ts)));
+
+            const totals = rows.reduce((acc, r) => ({
+                fp: acc.fp + r.fp, kh: acc.kh + r.kh, pk: acc.pk + r.pk
+            }), { fp: 0, kh: 0, pk: 0 });
+
+            return { rows: rows, totals: totals, stops: rows.length, units: totals.fp + totals.kh * 0.5 };
+        }
+
+        // Souhrn palet za vybraný den pro VŠECHNY řidiče najednou –
+        // používá se pro štítky v záložce ŘIDIČI.
+        function getDayLoadTotalsByDriver(dateStr) {
+            const map = {};
+            if (!dateStr) return map;
+            const dayIds = {};
+            (localDailyTargets || []).forEach(t => { if (t && t.date === dateStr) dayIds[t.id] = true; });
+            (localPickups || []).forEach(p => {
+                if (!p || !p.targetId || !dayIds[p.targetId]) return;
+                const d = String(p.driver || '').trim().toUpperCase();
+                if (!d) return;
+                if (!map[d]) map[d] = { fp: 0, kh: 0, pk: 0, stops: 0, targets: {} };
+                map[d].fp += Number(p.fp) || 0;
+                map[d].kh += Number(p.kh) || 0;
+                map[d].pk += Number(p.pk) || 0;
+                map[d].targets[p.targetId] = true;
+            });
+            Object.keys(map).forEach(k => { map[k].stops = Object.keys(map[k].targets).length; });
+            return map;
+        }
+
+        // Sestaví HTML bloku "Nakládky" do karty řidiče.
+        function buildDriverDayLoadHtml(driverName) {
+            const data = getDriverDayLoadings(driverName, activeDate);
+            const dateLabel = escDC(formatDateToCzech(activeDate));
+
+            const headline = '<p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">' +
+                'Nakládky – ' + dateLabel + '</p>';
+
+            if (data.rows.length === 0) {
+                return `
+                    <div class="pt-3 border-t border-gray-100 dark:border-slate-700">
+                        ${headline}
+                        <div class="text-xs text-gray-400 italic text-center bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-xl py-3 px-2">
+                            Ve vybraný den nemá tento řidič zaznamenanou žádnou nakládku.
+                        </div>
+                    </div>`;
+            }
+
+            // Štítek se zobrazí jen u nenulové hodnoty (KH: 0 je zbytečný šum).
+            const chip = (label, value, cls) => (value > 0
+                ? `<span class="px-1.5 py-0.5 rounded-md text-[11px] font-black ${cls}">${label}: ${value}</span>`
+                : '');
+
+            const rowsHtml = data.rows.map(r => `
+                <div onclick="openTargetFromDriverCard('${escDC(r.targetId)}')"
+                     class="flex justify-between items-center gap-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg p-2.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors active:scale-[0.99]"
+                     title="Otevřít přehled svozu u zákazníka ${escDC(r.customer)}">
+                    <span class="font-black text-[#003366] dark:text-blue-300 text-[13px] uppercase tracking-wide truncate">🏢 ${escDC(r.customer)}</span>
+                    <span class="flex items-center gap-1 shrink-0">
+                        ${chip('FP', r.fp, 'bg-[#e6f0fa] text-[#003366]')}
+                        ${chip('KH', r.kh, 'bg-amber-100 text-amber-800')}
+                        ${chip('PK', r.pk, 'bg-slate-100 text-slate-600')}
+                    </span>
+                </div>`).join('');
+
+            // Vytížení vozidla – jen když je na Kartě řidiče typ vozidla s počtem palet.
+            const card = (localDriverCards || []).find(c =>
+                c && String(c.name || '').toUpperCase() === String(driverName || '').trim().toUpperCase());
+            const cap = card ? parseVehicleCapacity(card.vehicleSize) : null;
+
+            let capHtml = '';
+            if (cap) {
+                const pct = Math.round((data.units / cap) * 100);
+                const barPct = Math.min(100, Math.max(0, pct));
+                const barColor = pct >= 90 ? 'bg-[#e30613]' : (pct >= 70 ? 'bg-amber-500' : 'bg-emerald-500');
+                const txtColor = pct >= 90 ? 'text-[#e30613]' : (pct >= 70 ? 'text-amber-600' : 'text-emerald-600');
+                capHtml = `
+                    <div class="mt-2 bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-xl p-2.5">
+                        <div class="flex justify-between items-baseline mb-1 gap-2">
+                            <span class="text-[9px] uppercase font-bold text-gray-400 tracking-wider">Vytížení vozidla</span>
+                            <span class="text-[11px] font-black ${txtColor}">${fmtNumDC(data.units)} / ${cap} míst · ${pct} %</span>
+                        </div>
+                        <div class="w-full h-2 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                            <div class="h-full ${barColor} rounded-full transition-all" style="width:${barPct}%"></div>
+                        </div>
+                        <p class="text-[9px] text-gray-400 mt-1">Přepočet na paletová místa: FP = 1, KH = 0,5. PK se do vytížení nepočítá.</p>
+                    </div>`;
+            } else if (card) {
+                capHtml = `
+                    <div class="mt-2 text-[10px] text-gray-400 italic text-center">
+                        Vytížení nelze spočítat – na kartě řidiče není typ vozidla s počtem palet (např. „NÁVĚS 33 PAL.“).
+                    </div>`;
+            }
+
+            return `
+                <div class="pt-3 border-t border-gray-100 dark:border-slate-700">
+                    ${headline}
+                    <div class="flex flex-wrap items-center gap-1.5 mb-2">
+                        <span class="text-[11px] font-black text-slate-600 dark:text-slate-300">${data.stops} ${stopsWordDC(data.stops)}</span>
+                        <span class="text-gray-300">·</span>
+                        <span class="text-[11px] font-black text-slate-600 dark:text-slate-300">Celkem:</span>
+                        ${chip('FP', data.totals.fp, 'bg-[#003366] text-white')}
+                        ${chip('KH', data.totals.kh, 'bg-amber-500 text-white')}
+                        ${chip('PK', data.totals.pk, 'bg-slate-500 text-white')}
+                    </div>
+                    <div class="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                        ${rowsHtml}
+                    </div>
+                    ${capHtml}
+                </div>`;
+        }
+
+        // Proklik ze seznamu v kartě řidiče na přehled svozu daného zákazníka.
+        function openTargetFromDriverCard(targetId) {
+            closeDriverCardModal();
+            switchTab('counter');
+            openDetails(targetId);
+        }
+
+        // Živý přepočet: když během otevřené karty řidiče někdo zapíše nakládku,
+        // karta se sama obnoví (volá se z onSnapshot posluchačů).
+        function refreshDriverCardIfOpen() {
+            const modal = document.getElementById('driverCardModal');
+            if (!modal || modal.classList.contains('hidden')) return;
+            if (!currentDriverCardName) return;
+            showDriverCard(currentDriverCardName);
+        }
+
         function showDriverCard(driverName) {
             if (!driverName) return;
             const normName = driverName.trim().toUpperCase();
@@ -2511,8 +2741,14 @@
             const modal = document.getElementById('driverCardModal');
             const title = document.getElementById('driverCardModalTitle');
             const body = document.getElementById('driverCardModalBody');
+            const subtitle = document.getElementById('driverCardModalSubtitle');
 
             title.textContent = normName;
+            currentDriverCardName = normName;
+            if (subtitle) subtitle.textContent = 'Karta řidiče · ' + formatDateToCzech(activeDate);
+
+            // Přehled nakládek za vybraný den (stejný blok pro obě varianty níže).
+            const dayLoadHtml = buildDriverDayLoadHtml(normName);
 
             const card = localDriverCards.find(c => c.name.toUpperCase() === normName);
 
@@ -2553,6 +2789,8 @@
                             ${phoneButton}
                             ${smsButton}
                         </div>
+
+                        ${dayLoadHtml}
                         
                         <div class="pt-3 border-t border-gray-100 dark:border-slate-700 flex justify-between items-center text-xs">
                             <button onclick="goToEditDriverCard('${card.id}')" class="text-[#003366] hover:underline font-bold">✏️ Upravit v nastavení</button>
@@ -2573,6 +2811,10 @@
                         <button onclick="quickCreateDriverCardFromModal('${normName}')" class="w-full bg-[#003366] hover:bg-black text-white font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition-colors shadow-sm mt-2">
                             ➕ Vytvořit kartu řidiče
                         </button>
+
+                        <div class="text-left">
+                            ${dayLoadHtml}
+                        </div>
                     </div>
                 `;
             }
@@ -2582,6 +2824,7 @@
         }
 
         function closeDriverCardModal() {
+            currentDriverCardName = null;
             const modal = document.getElementById('driverCardModal');
             if (modal) {
                 modal.classList.remove('flex');
