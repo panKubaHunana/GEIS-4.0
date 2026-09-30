@@ -14,7 +14,6 @@
     
     <!-- Tailwind CSS s konfigurací přepínání tmavého režimu přes třídu -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class'
@@ -392,21 +391,18 @@
         </div>
     </div>
 
-    <!-- Statistiky -->
-    <main id="tab-stats" class="hidden-tab p-4 space-y-4">
-        <div class="flex space-x-2 mb-4">
-            <button onclick="renderStats('week')" id="btn-stat-week" class="flex-1 bg-[#003366] text-white py-2 rounded-lg font-bold shadow-sm text-sm transition-colors uppercase tracking-wider">Tento týden</button>
-            <button onclick="renderStats('month')" id="btn-stat-month" class="flex-1 bg-white text-slate-700 py-2 rounded-lg font-bold shadow-sm border text-sm transition-colors uppercase tracking-wider">Tento měsíc</button>
-        </div>
-        
-        <div class="flex justify-between items-center">
-            <h2 class="text-lg font-bold text-[#003366] uppercase tracking-tight" id="statsTitle">Statistiky</h2>
-            <button id="btnExportExcel" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-1.5 px-3 rounded-lg flex items-center gap-1.5 shadow-sm transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                Export Excel
+    <!-- Pískoviště (plánování směrů na příští den) -->
+    <main id="tab-sandbox" class="hidden-tab p-4 space-y-4">
+        <div class="flex justify-between items-center gap-2">
+            <div>
+                <h2 class="text-lg font-bold text-[#003366] uppercase tracking-tight">Pískoviště</h2>
+                <p class="text-[11px] text-gray-500 dark:text-gray-400">Orientační rozdělení řidičů na směry – bez vazby na konkrétní den, klidně si to přes den přepisuj.</p>
+            </div>
+            <button onclick="clearSandboxPlan()" class="shrink-0 bg-white hover:bg-gray-50 text-[#e30613] border border-red-200 text-[10px] font-bold py-1.5 px-2.5 rounded-lg uppercase tracking-wider transition-colors">
+                Vymazat vše
             </button>
         </div>
-        <div id="statsContent" class="space-y-4"></div>
+        <div id="sandboxContent" class="space-y-3"></div>
     </main>
 
     <!-- Nastavení -->
@@ -517,6 +513,23 @@
                 </div>
                 <div id="settingsDriverCardsList" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
                 <p class="text-[10px] text-gray-400 italic px-1">Evidence řidičů je od této verze součástí Karty řidiče výše – samostatný seznam jmen (bez dalších údajů) byl zrušen, ať databázi řidičů nemáš dvakrát.</p>
+            </div>
+        </details>
+
+        <!-- PÍSKOVIŠTĚ – SMĚRY -->
+        <details class="bg-white rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden group">
+            <summary class="flex justify-between items-center p-4 cursor-pointer font-bold text-xs select-none list-none transition-all duration-200 bg-[#003366] text-white group-open:bg-blue-50 group-open:text-[#003366] group-open:border-b group-open:border-blue-100">
+                <span class="uppercase tracking-wider">🧭 PÍSKOVIŠTĚ – SMĚRY</span>
+                <span class="transition-transform duration-200 group-open:rotate-180 text-white group-open:text-[#003366]">▼</span>
+            </summary>
+            <div class="p-4 space-y-3">
+                <p class="text-[10px] text-gray-400 italic">Číslo u směru je orientační počet vozidel, podle kterého se v Pískovišti barví štítek obsazenosti (červená/oranžová/zelená).</p>
+                <div class="flex gap-2">
+                    <input type="text" id="newSandboxDirName" placeholder="Název směru" class="flex-1 bg-gray-50 border border-gray-300 rounded-lg p-2 text-xs font-bold uppercase outline-none focus:border-[#003366] text-black dark:text-white">
+                    <input type="number" id="newSandboxDirExpected" placeholder="Poč. vozidel" min="1" value="1" class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2 text-xs font-bold outline-none focus:border-[#003366] text-black dark:text-white">
+                    <button onclick="addSandboxDirection()" class="bg-[#003366] text-white px-4 rounded-lg font-bold text-sm hover:bg-black transition-colors">+</button>
+                </div>
+                <div id="settingsSandboxDirectionsList" class="max-h-64 overflow-y-auto space-y-2 pr-1"></div>
             </div>
         </details>
 
@@ -658,9 +671,9 @@
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V14a1 1 0 01-1 1h-1m-5.333-3H15"></path></svg>
             <span class="text-[10px] mt-1 font-bold tracking-wide uppercase">Návěsy</span>
         </button>
-        <button id="nav-stats" onclick="switchTab('stats', event)" class="text-gray-400 flex flex-col items-center transition-colors">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
-            <span class="text-[10px] mt-1 font-bold tracking-wide uppercase">Statistiky</span>
+        <button id="nav-sandbox" onclick="switchTab('sandbox', event)" class="text-gray-400 flex flex-col items-center transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            <span class="text-[10px] mt-1 font-bold tracking-wide uppercase">Pískoviště</span>
         </button>
         <button id="nav-settings" onclick="switchTab('settings', event)" class="text-gray-400 flex flex-col items-center transition-colors">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -738,11 +751,34 @@
             "SOLO 15 PAL.", "SOLO 18 PAL.", "NÁVĚS 33 PAL.", "JINÉ"
         ].map(item => item.toUpperCase());
 
+        // Výchozí směry pro Pískoviště (večerní plánování) – "expected" je orientační
+        // počet vozidel, který ten směr typicky potřebuje; podle něj se barví štítek
+        // obsazenosti (červená/oranžová/zelená). Obojí (názvy i čísla) si lze kdykoli
+        // upravit v Nastavení → Pískoviště – směry.
+        const defaultSandboxDirections = [
+            { name: "NOVÝ BYDŽOV", expected: 1 },
+            { name: "HRADEC KRÁLOVÉ", expected: 3 },
+            { name: "JIČÍN", expected: 2 },
+            { name: "HOŘICE", expected: 2 },
+            { name: "VRCHLABÍ", expected: 2 },
+            { name: "DVŮR KRÁLOVÉ NAD LABEM", expected: 2 },
+            { name: "JAROMĚŘ", expected: 1 },
+            { name: "RYCHNOV NAD KNĚŽNOU", expected: 1 },
+            { name: "TÝNIŠTĚ NAD ORLICÍ", expected: 1 },
+            { name: "DOBRUŠKA", expected: 1 },
+            { name: "NOVÉ MĚSTO NAD METUJÍ", expected: 1 },
+            { name: "NÁCHOD", expected: 1 },
+            { name: "TRUTNOV", expected: 2 },
+            { name: "BROUMOV", expected: 1 },
+            { name: "HOLICE", expected: 1 },
+            { name: "PARDUBICE", expected: 3 },
+            { name: "PŘELOUČ", expected: 1 }
+        ];
+
         let currentTargetId = null;
         // Jméno řidiče, jehož karta je právě otevřená (kvůli živému přepočtu).
         let currentDriverCardName = null;
         let currentGridFilter = 'all'; 
-        let currentStatsPeriod = 'week';
         
         let editingTrailerPlanId = null;
         let editingPickupId = null; 
@@ -1160,6 +1196,7 @@
                 db.collection("settings").doc("customersPickup").set({ list: defaultCustomers });
                 db.collection("settings").doc("carriers").set({ list: defaultCarriers });
                 db.collection("settings").doc("vehicles").set({ list: defaultVehicles });
+                db.collection("settings").doc("sandboxDirections").set({ list: defaultSandboxDirections });
                 // Řidiči: od této verze je jediným zdrojem pravdy Karta řidiče (kolekce
                 // driverCards), takže při zcela prázdné databázi rovnou založíme karty
                 // z výchozího seznamu jmen – ne starý seznam settings/drivers.
@@ -1176,6 +1213,9 @@
                 db.collection("settings").doc("vehicles").get().then(doc => {
                     if (!doc.exists) db.collection("settings").doc("vehicles").set({ list: defaultVehicles });
                 });
+                db.collection("settings").doc("sandboxDirections").get().then(doc => {
+                    if (!doc.exists) db.collection("settings").doc("sandboxDirections").set({ list: defaultSandboxDirections });
+                });
             }
         });
 
@@ -1189,12 +1229,18 @@
                     _driversMigratedFlag = !!meta.driversMigratedToCards;
                     return;
                 }
+                if (doc.id === 'sandboxPlan') {
+                    // Pískoviště má jiný tvar dat (assignments, ne list) – uložíme zvlášť.
+                    localStorage.setItem('sandboxPlan', JSON.stringify(doc.data().assignments || {}));
+                    return;
+                }
                 localStorage.setItem(doc.id, JSON.stringify(doc.data().list || []));
             });
             _settingsLoaded = true;
             renderSettingsTab();
             populateAllDropdowns();
             renderDriversTab();
+            renderSandboxTab();
             tryMigrateCustomers();
             tryRenameCustomerCards();
             trySeedDefaultsV2();
@@ -1243,9 +1289,10 @@
             renderDriverCardsList();
             // Karta řidiče je teď jediným zdrojem seznamu jmen řidičů – při každé změně
             // (přidání/úprava/smazání karty, i z jiného zařízení) musíme obnovit i
-            // nabídky řidičů a záložku Řidiči, ne jen samotný seznam karet v Nastavení.
+            // nabídky řidičů, záložku Řidiči a Pískoviště (nabídku jmen ve výběrech).
             renderDriversTab();
             populateAllDropdowns();
+            renderSandboxTab();
             _driverCardsLoaded = true;
             tryMigrateDrivers();
         });
@@ -2090,241 +2137,167 @@
             }
         }
 
-        function renderStats(period) {
-            currentStatsPeriod = period;
-            const btnWeek = document.getElementById('btn-stat-week');
-            const btnMonth = document.getElementById('btn-stat-month');
-            
-            if(period === 'week') {
-                btnWeek.className = "flex-1 bg-[#003366] text-white py-2 rounded-lg font-bold shadow-sm text-sm transition-colors uppercase tracking-wider";
-                btnMonth.className = "flex-1 bg-white text-slate-700 py-2 rounded-lg font-bold shadow-sm border text-sm transition-colors uppercase tracking-wider";
-                document.getElementById('statsTitle').textContent = "Statistiky: Tento kalendářní týden";
-            } else {
-                btnMonth.className = "flex-1 bg-[#003366] text-white py-2 rounded-lg font-bold shadow-sm text-sm transition-colors uppercase tracking-wider";
-                btnWeek.className = "flex-1 bg-white text-slate-700 py-2 rounded-lg font-bold shadow-sm border text-sm transition-colors uppercase tracking-wider";
-                document.getElementById('statsTitle').textContent = "Statistiky: Tento kalendářní měsíc";
-            }
-
-            const pickups = localPickups;
-            const targets = localDailyTargets;
-            
-            const now = new Date();
-            const nowCopy = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            let filteredPickups = [];
-
-            if (period === 'week') {
-                const dayOfWeek = nowCopy.getDay();
-                const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-                const firstDayOfWeek = new Date(nowCopy.setDate(nowCopy.getDate() + diffToMonday));
-                firstDayOfWeek.setHours(0,0,0,0);
-                filteredPickups = pickups.filter(p => new Date(p.timestamp) >= firstDayOfWeek);
-            } else {
-                const firstDayOfMonth = new Date(nowCopy.getFullYear(), nowCopy.getMonth(), 1);
-                firstDayOfMonth.setHours(0,0,0,0);
-                filteredPickups = pickups.filter(p => new Date(p.timestamp) >= firstDayOfMonth);
-            }
-
-            let trailerPickups = [];
-            let otherPickups = [];
-
-            filteredPickups.forEach(p => {
-                const targetObj = targets.find(t => t.id === p.targetId);
-                const pDate = targetObj ? targetObj.date : null;
-                const isTrailer = localTrailerPlans.some(tp => tp.driver === p.driver && tp.date === pDate);
-                
-                if (isTrailer) trailerPickups.push(p);
-                else otherPickups.push(p);
-            });
-
-            function aggregateStats(pickupList) {
-                let customerStats = {};
-                let driverStats = {};
-
-                pickupList.forEach(p => {
-                    const targetObj = targets.find(t => t.id === p.targetId);
-                    const custName = targetObj ? targetObj.customer : "Nezmámý";
-
-                    if (!customerStats[custName]) customerStats[custName] = { fp: 0, kh: 0, pk: 0 };
-                    customerStats[custName].fp += p.fp;
-                    customerStats[custName].kh += p.kh;
-                    customerStats[custName].pk += (p.pk || 0);
-
-                    if (!driverStats[p.driver]) driverStats[p.driver] = { fp: 0, kh: 0, pk: 0, totalTrips: 0, targetsVisited: new Set() };
-                    driverStats[p.driver].fp += p.fp;
-                    driverStats[p.driver].kh += p.kh;
-                    driverStats[p.driver].pk += (p.pk || 0);
-                    driverStats[p.driver].totalTrips += 1;
-                    driverStats[p.driver].targetsVisited.add(custName);
-                });
-
-                return { customerStats, driverStats };
-            }
-
-            const trailerAgg = aggregateStats(trailerPickups);
-            const otherAgg = aggregateStats(otherPickups);
-
-            function makeStatsSectionHTML(title, iconSVG, statsData) {
-                let html = `
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 space-y-4">
-                    <h3 class="font-bold text-[#003366] border-b pb-2 text-[11px] uppercase tracking-wider flex items-center gap-1.5">
-                        ${iconSVG} ${title}
-                    </h3>
-                    <div>
-                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-wider mb-2">Celkový odběr od zákazníků:</p>`;
-                
-                const custEntries = Object.entries(statsData.customerStats);
-                if (custEntries.length > 0) {
-                    custEntries.forEach(([cust, val]) => {
-                        html += `
-                        <div class="flex justify-between py-1.5 text-xs border-b border-gray-100 last:border-none">
-                            <span class="font-bold text-slate-800 cursor-pointer hover:underline" onclick="showCustomerCard('${cust}')">${cust}</span>
-                            <span class="text-gray-500">Celkem: <b class="text-slate-800">${val.fp} FP / ${val.kh} KH / ${val.pk} PK</b></span>
-                        </div>`;
-                    });
-                } else {
-                    html += `<p class="text-xs text-gray-400 italic py-1">V tomto období nejsou žádné svozy.</p>`;
-                }
-
-                html += `</div><div class="pt-2 border-t border-gray-100"><p class="text-[9px] font-black text-gray-400 uppercase tracking-wider mb-2">Výkony řidičů a vytížení:</p>`;
-
-                const drvEntries = Object.entries(statsData.driverStats);
-                if (drvEntries.length > 0) {
-                    drvEntries.forEach(([driver, val]) => {
-                        const totalCalculated = val.fp + (val.kh * 0.5) + val.pk;
-                        html += `
-                        <div class="py-2 border-b border-gray-100 last:border-none">
-                            <div class="flex justify-between items-center font-bold text-xs text-slate-800">
-                                <span class="cursor-pointer hover:underline" onclick="showDriverCard('${driver}')">👤 ${driver}</span>
-                                <span class="bg-[#003366] text-white px-2 py-0.5 rounded text-[10px] font-bold">${totalCalculated} přepočtených palet</span>
-                            </div>
-                            <div class="grid grid-cols-2 gap-1 text-[11px] text-gray-500 mt-1">
-                                <p>Naloženo: <b class="text-slate-700">${val.totalTrips}x</b></p>
-                                <p>Reálně: <b class="text-slate-700">${val.fp} FP / ${val.kh} KH / ${val.pk} PK</b></p>
-                            </div>
-                            <p class="text-[10px] text-gray-400 mt-1 leading-tight">Místa svozu: ${Array.from(val.targetsVisited).join(', ')}</p>
-                        </div>`;
-                    });
-                } else {
-                    html += `<p class="text-xs text-gray-400 italic py-1">V tomto období nejsou žádné naložené jízdy.</p>`;
-                }
-                html += `</div></div>`;
-                return html;
-            }
-
-            const trailerIcon = `<svg class="w-4 h-4 text-[#003366]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V14a1 1 0 01-1 1h-1m-5.333-3H15"></path></svg>`;
-            const otherIcon = `<svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>`;
-
-            document.getElementById('statsContent').innerHTML = 
-                makeStatsSectionHTML("Návěsy (Firemní přímé svozy)", trailerIcon, trailerAgg) + 
-                makeStatsSectionHTML("Jiná vozidla (Smluvní)", otherIcon, otherAgg);
+        // ====================================================================
+        //  PÍSKOVIŠTĚ – večerní rozdělení řidičů na pevné směry (bez vazby na
+        //  konkrétní kalendářní den; pořád se přepisuje jeden aktuální plán).
+        //  Data: settings/sandboxDirections ({list:[{name,expected}]}) a
+        //  settings/sandboxPlan ({assignments:{"<směr>":["ŘIDIČ", ...]}}).
+        // ====================================================================
+        function getSandboxDirections() {
+            return JSON.parse(localStorage.getItem('sandboxDirections') || '[]');
         }
 
-        document.getElementById('btnExportExcel').addEventListener('click', exportStatsToExcel);
+        function getSandboxPlan() {
+            return JSON.parse(localStorage.getItem('sandboxPlan') || '{}');
+        }
 
-        async function exportStatsToExcel() {
-            const periodText = currentStatsPeriod === 'week' ? 'tyden' : 'mesic';
-            const pickups = localPickups;
-            const targets = localDailyTargets;
+        function saveSandboxAssignments(directionName, rows) {
+            const plan = getSandboxPlan();
+            plan[directionName] = rows;
+            db.collection("settings").doc("sandboxPlan").set({ assignments: plan })
+                .catch(e => alert("Chyba při ukládání pískoviště: " + e.message));
+        }
 
-            const now = new Date();
-            const nowCopy = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            let filteredPickups = [];
+        function addSandboxRow(directionName) {
+            const plan = getSandboxPlan();
+            const rows = plan[directionName] ? [...plan[directionName]] : [];
+            rows.push('');
+            saveSandboxAssignments(directionName, rows);
+        }
 
-            if (currentStatsPeriod === 'week') {
-                const dayOfWeek = nowCopy.getDay();
-                const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-                const firstDayOfWeek = new Date(nowCopy.setDate(nowCopy.getDate() + diffToMonday));
-                firstDayOfWeek.setHours(0,0,0,0);
-                filteredPickups = pickups.filter(p => new Date(p.timestamp) >= firstDayOfWeek);
-            } else {
-                const firstDayOfMonth = new Date(nowCopy.getFullYear(), nowCopy.getMonth(), 1);
-                firstDayOfMonth.setHours(0,0,0,0);
-                filteredPickups = pickups.filter(p => new Date(p.timestamp) >= firstDayOfMonth);
+        function removeSandboxRow(directionName, idx) {
+            const plan = getSandboxPlan();
+            const rows = plan[directionName] ? [...plan[directionName]] : [];
+            rows.splice(idx, 1);
+            saveSandboxAssignments(directionName, rows);
+        }
+
+        function setSandboxDriver(directionName, idx, value) {
+            const plan = getSandboxPlan();
+            const rows = plan[directionName] ? [...plan[directionName]] : [];
+            while (rows.length <= idx) rows.push('');
+            rows[idx] = value;
+            saveSandboxAssignments(directionName, rows);
+        }
+
+        function clearSandboxPlan() {
+            if (!confirm("Opravdu chceš vymazat celé pískoviště – všechny řidiče přiřazené ke všem směrům?")) return;
+            db.collection("settings").doc("sandboxPlan").set({ assignments: {} })
+                .catch(e => alert("Chyba při mazání pískoviště: " + e.message));
+        }
+
+        function renderSandboxTab() {
+            const container = document.getElementById('sandboxContent');
+            if (!container) return;
+
+            const directions = getSandboxDirections();
+            const plan = getSandboxPlan();
+            const driverNames = getDriverCardNames();
+
+            if (directions.length === 0) {
+                container.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-6">Zatím nejsou nastavené žádné směry. Přidej je v Nastavení → Pískoviště – směry.</p>';
+                return;
             }
 
-            let customerStats = {};
-            let driverStats = {};
+            container.innerHTML = directions.map(dir => {
+                const safeDir = String(dir.name).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                const rows = plan[dir.name] || [];
+                const displayRows = rows.length > 0 ? rows : [''];
+                const filledCount = rows.filter(r => r).length;
 
-            filteredPickups.forEach(p => {
-                const targetObj = targets.find(t => t.id === p.targetId);
-                const custName = targetObj ? targetObj.customer : "Neznámý";
+                let badgeCls = 'bg-red-100 text-red-700 border-red-300';
+                if (filledCount > 0 && filledCount < dir.expected) badgeCls = 'bg-orange-100 text-orange-700 border-orange-300';
+                else if (filledCount >= dir.expected && dir.expected > 0) badgeCls = 'bg-emerald-100 text-emerald-700 border-emerald-300';
 
-                if (!customerStats[custName]) customerStats[custName] = { fp: 0, kh: 0, pk: 0 };
-                customerStats[custName].fp += p.fp;
-                customerStats[custName].kh += p.kh;
-                customerStats[custName].pk += (p.pk || 0);
+                const rowsHtml = displayRows.map((driverName, idx) => {
+                    const options = '<option value="">– vyberte řidiče –</option>' +
+                        driverNames.map(n => `<option value="${n}" ${n === driverName ? 'selected' : ''}>${n}</option>`).join('');
+                    return `
+                    <div class="flex items-center gap-1.5">
+                        <select onchange="setSandboxDriver('${safeDir}', ${idx}, this.value)" class="flex-1 bg-gray-50 dark:bg-slate-850 border border-gray-300 dark:border-slate-700 rounded-lg p-1.5 text-xs font-bold uppercase outline-none focus:border-[#003366] text-black dark:text-white">
+                            ${options}
+                        </select>
+                        <button onclick="removeSandboxRow('${safeDir}', ${idx})" class="text-[#e30613] hover:text-red-700 font-bold text-sm px-1.5 transition-transform active:scale-90">✕</button>
+                    </div>`;
+                }).join('');
 
-                if (!driverStats[p.driver]) driverStats[p.driver] = { fp: 0, kh: 0, pk: 0 };
-                driverStats[p.driver].fp += p.fp;
-                driverStats[p.driver].kh += p.kh;
-                driverStats[p.driver].pk += (p.pk || 0);
-            });
-
-            // Abecední řazení (česká lokalizace)
-            const driverEntries = Object.entries(driverStats).sort((a,b) => a[0].localeCompare(b[0], 'cs'));
-            const customerEntries = Object.entries(customerStats).sort((a,b) => a[0].localeCompare(b[0], 'cs'));
-
-            const workbook = new ExcelJS.Workbook();
-            const sheetName = `geis_export_${periodText}_${getTodayStr()}`;
-            const ws = workbook.addWorksheet(sheetName);
-
-            ws.getColumn('B').width = 25.3;
-            ws.getColumn('C').width = 10.8;
-            ws.getColumn('D').width = 10.8;
-            ws.getColumn('E').width = 10.8;
-            ws.getColumn('G').width = 25.3;
-            ws.getColumn('H').width = 10.8;
-            ws.getColumn('I').width = 10.8;
-            ws.getColumn('J').width = 10.8;
-
-            const centerBold12 = { font: { bold: true, size: 12 }, alignment: { horizontal: 'center' } };
-            const centerBold11 = { font: { bold: true, size: 11 }, alignment: { horizontal: 'center' } };
-            const rightPlain11 = { font: { bold: false, size: 11 }, alignment: { horizontal: 'right' } };
-            const rightBold11  = { font: { bold: true,  size: 11 }, alignment: { horizontal: 'right' } };
-            const centerPlain12 = { font: { bold: false, size: 12 }, alignment: { horizontal: 'center' } };
-
-            // Řádek 1 – nadpisy tabulek
-            ws.mergeCells('C1:E1');
-            ws.getCell('C1').value = 'NALOŽENO';
-            Object.assign(ws.getCell('C1'), centerBold12);
-
-            ws.mergeCells('H1:J1');
-            ws.getCell('H1').value = 'ODVEZENO';
-            Object.assign(ws.getCell('H1'), centerBold12);
-
-            // Řádek 2 – hlavičky sloupců
-            ws.getCell('B2').value = 'ŘIDIČ';    Object.assign(ws.getCell('B2'), centerBold12);
-            ws.getCell('C2').value = 'FP';       Object.assign(ws.getCell('C2'), centerBold11);
-            ws.getCell('D2').value = 'KH';       Object.assign(ws.getCell('D2'), centerBold11);
-            ws.getCell('E2').value = 'PK';       Object.assign(ws.getCell('E2'), centerBold11);
-
-            ws.getCell('G2').value = 'ZÁKAZNÍK'; Object.assign(ws.getCell('G2'), centerBold12);
-            ws.getCell('H2').value = 'FP';       Object.assign(ws.getCell('H2'), centerBold11);
-            ws.getCell('I2').value = 'KH';       Object.assign(ws.getCell('I2'), centerBold11);
-            ws.getCell('J2').value = 'PK';       Object.assign(ws.getCell('J2'), centerBold11);
-
-            // Data – řidiči (levá tabulka, "NALOŽENO")
-            driverEntries.forEach(([name, val], i) => {
-                const row = 3 + i;
-                ws.getCell(`B${row}`).value = name;      Object.assign(ws.getCell(`B${row}`), rightPlain11);
-                if (val.fp) { ws.getCell(`C${row}`).value = val.fp; Object.assign(ws.getCell(`C${row}`), centerPlain12); }
-                if (val.kh) { ws.getCell(`D${row}`).value = val.kh; Object.assign(ws.getCell(`D${row}`), centerPlain12); }
-                if (val.pk) { ws.getCell(`E${row}`).value = val.pk; Object.assign(ws.getCell(`E${row}`), centerPlain12); }
-            });
-
-            // Data – zákazníci (pravá tabulka, "ODVEZENO")
-            customerEntries.forEach(([name, val], i) => {
-                const row = 3 + i;
-                ws.getCell(`G${row}`).value = name;      Object.assign(ws.getCell(`G${row}`), rightBold11);
-                if (val.fp) { ws.getCell(`H${row}`).value = val.fp; Object.assign(ws.getCell(`H${row}`), centerPlain12); }
-                if (val.kh) { ws.getCell(`I${row}`).value = val.kh; Object.assign(ws.getCell(`I${row}`), centerPlain12); }
-                if (val.pk) { ws.getCell(`J${row}`).value = val.pk; Object.assign(ws.getCell(`J${row}`), centerPlain12); }
-            });
-
-            const buffer = await workbook.xlsx.writeBuffer();
-            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-            await downloadOrShareFile(blob, `${sheetName}.xlsx`);
+                return `
+                <div class="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
+                    <div class="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
+                        <span class="font-black text-xs uppercase text-slate-800 dark:text-slate-100">${dir.name}</span>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${badgeCls}">${filledCount} / ${dir.expected} vozidel</span>
+                    </div>
+                    <div class="p-2 space-y-1.5">
+                        ${rowsHtml}
+                        <button onclick="addSandboxRow('${safeDir}')" class="text-[10px] text-[#003366] dark:text-blue-300 font-bold hover:underline pt-0.5">+ Přidat vozidlo</button>
+                    </div>
+                </div>`;
+            }).join('');
         }
+
+        // --- Nastavení → Pískoviště – směry (spravuje seznam směrů a jejich
+        // očekávaný počet vozidel, podle kterého se barví štítek obsazenosti) ---
+        function addSandboxDirection() {
+            const nameInput = document.getElementById('newSandboxDirName');
+            const expInput = document.getElementById('newSandboxDirExpected');
+            const name = nameInput.value.trim().toUpperCase();
+            const expected = Math.max(1, parseInt(expInput.value, 10) || 1);
+            if (!name) { alert("Zadejte prosím název směru!"); return; }
+
+            let list = getSandboxDirections();
+            if (list.some(d => d.name === name)) { alert("Tento směr už v seznamu existuje."); return; }
+            list.push({ name, expected });
+            db.collection("settings").doc("sandboxDirections").set({ list: list })
+                .catch(e => alert("Chyba při uložení: " + e.message));
+            nameInput.value = '';
+            expInput.value = '1';
+        }
+
+        function updateSandboxDirectionExpected(name, expectedValue) {
+            let list = getSandboxDirections();
+            const idx = list.findIndex(d => d.name === name);
+            if (idx === -1) return;
+            list[idx] = { ...list[idx], expected: Math.max(1, parseInt(expectedValue, 10) || 1) };
+            db.collection("settings").doc("sandboxDirections").set({ list: list })
+                .catch(e => alert("Chyba při uložení: " + e.message));
+        }
+
+        function removeSandboxDirection(name) {
+            if (!confirm(`Opravdu chceš smazat směr "${name}"? Smažou se i řidiči, kteří jsou u něj teď v Pískovišti přiřazení.`)) return;
+
+            const list = getSandboxDirections().filter(d => d.name !== name);
+            db.collection("settings").doc("sandboxDirections").set({ list: list })
+                .catch(e => alert("Chyba při mazání: " + e.message));
+
+            const plan = getSandboxPlan();
+            if (plan[name]) {
+                delete plan[name];
+                db.collection("settings").doc("sandboxPlan").set({ assignments: plan })
+                    .catch(() => {});
+            }
+        }
+
+        function renderSandboxDirectionsSettingsList() {
+            const el = document.getElementById('settingsSandboxDirectionsList');
+            if (!el) return;
+            const list = getSandboxDirections();
+            if (list.length === 0) {
+                el.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-2">Zatím žádné směry.</p>';
+                return;
+            }
+            el.innerHTML = list.map(d => {
+                const safe = String(d.name).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                return `
+                <div class="flex justify-between items-center bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 p-2.5 rounded-xl shadow-sm font-bold uppercase">
+                    <span class="text-slate-800 dark:text-slate-100 text-xs">${d.name}</span>
+                    <div class="flex items-center gap-2">
+                        <input type="number" min="1" value="${d.expected}" onchange="updateSandboxDirectionExpected('${safe}', this.value)" title="Očekávaný počet vozidel" class="w-14 bg-gray-50 dark:bg-slate-850 border border-gray-300 dark:border-slate-700 rounded-lg p-1 text-center text-xs font-bold text-black dark:text-white">
+                        <button onclick="removeSandboxDirection('${safe}')" class="text-[#e30613] hover:text-red-700 font-bold text-sm px-1 transition-transform active:scale-90">✕</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
 
         function exportDailyDetailedToExcel() {
             const targets = localDailyTargets.filter(t => t.date === activeDate);
@@ -2399,6 +2372,7 @@
 
             renderDriverCardsList();
             renderCustomerCardsList();
+            renderSandboxDirectionsSettingsList();
         }
 
         function addItem(key, inputId) {
@@ -3183,7 +3157,7 @@
             document.getElementById('tab-counter').className = 'hidden-tab';
             document.getElementById('tab-drivers').className = 'hidden-tab';
             document.getElementById('tab-trailers').className = 'hidden-tab';
-            document.getElementById('tab-stats').className = 'hidden-tab';
+            document.getElementById('tab-sandbox').className = 'hidden-tab';
             document.getElementById('tab-settings').className = 'hidden-tab';
             
             const isCounterOrTrailers = (tabId === 'counter' || tabId === 'trailers');
@@ -3208,7 +3182,7 @@
             if(tabId === 'counter') renderCounterTab();
             if(tabId === 'drivers') renderDriversTab();
             if(tabId === 'trailers') renderTrailersTab();
-            if(tabId === 'stats') renderStats('week');
+            if(tabId === 'sandbox') renderSandboxTab();
             if(tabId === 'settings') renderSettingsTab();
         }
 
