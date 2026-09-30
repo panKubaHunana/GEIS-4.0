@@ -516,21 +516,7 @@
                     </div>
                 </div>
                 <div id="settingsDriverCardsList" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
-            </div>
-        </details>
-
-        <!-- EVIDENCE ŘIDIČŮ -->
-        <details class="bg-white rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden group">
-            <summary class="flex justify-between items-center p-4 cursor-pointer font-bold text-xs select-none list-none transition-all duration-200 bg-[#003366] text-white group-open:bg-blue-50 group-open:text-[#003366] group-open:border-b group-open:border-blue-100">
-                <span class="uppercase tracking-wider">👥 EVIDENCE ŘIDIČŮ</span>
-                <span class="transition-transform duration-200 group-open:rotate-180 text-white group-open:text-[#003366]">▼</span>
-            </summary>
-            <div class="p-4 space-y-3">
-                <div class="flex space-x-2">
-                    <input type="text" id="newDriverName" placeholder="Jméno řidiče" class="flex-1 bg-gray-50 border border-gray-300 rounded-lg p-2 text-xs font-bold uppercase outline-none focus:border-[#003366] text-black dark:text-white">
-                    <button onclick="addItem('drivers', 'newDriverName')" class="bg-[#003366] text-white px-4 rounded-lg font-bold text-sm hover:bg-black transition-colors">+</button>
-                </div>
-                <div id="settingsDriversList" class="max-h-48 overflow-y-auto space-y-2 pr-1 text-sm"></div>
+                <p class="text-[10px] text-gray-400 italic px-1">Evidence řidičů je od této verze součástí Karty řidiče výše – samostatný seznam jmen (bez dalších údajů) byl zrušen, ať databázi řidičů nemáš dvakrát.</p>
             </div>
         </details>
 
@@ -785,6 +771,45 @@
             return sortAlphabetically([...new Set(names)]);
         }
 
+        // Vrátí seřazený seznam UNIKÁTNÍCH jmen řidičů z Karet řidiče (velkými písmeny).
+        // Od verze, kde je Karta řidiče JEDINÝM zdrojem pravdy o řidičích (dřív existovala
+        // navíc samostatná "Evidence řidičů" – obyčejný seznam jmen bez dalších údajů,
+        // který se snadno rozešel s Kartami a duplikoval databázi řidičů).
+        function getDriverCardNames() {
+            const names = (localDriverCards || [])
+                .map(c => (c && c.name ? String(c.name).toUpperCase().trim() : ''))
+                .filter(Boolean);
+            return sortAlphabetically([...new Set(names)]);
+        }
+
+        // Jednorázově vytvoří Kartu řidiče pro každé staré jméno ze zrušené "Evidence řidičů"
+        // (settings/drivers), které ještě kartu nemá. Spustí se jen jednou (příznak v
+        // settings/_meta), takže smazané karty se už znovu nevytvoří. Díky tomu se při
+        // přechodu na tuto verzi neztratí žádný řidič, co byl jen ve staré evidenci.
+        let _driverCardsLoaded = false, _driversMigrationDone = false, _driversMigratedFlag = false;
+        function tryMigrateDrivers() {
+            if (_driversMigrationDone || _driversMigratedFlag) return;
+            if (!_settingsLoaded || !_driverCardsLoaded) return;
+            _driversMigrationDone = true;
+
+            const oldNames = JSON.parse(localStorage.getItem('drivers') || '[]');
+            const existing = new Set((localDriverCards || []).map(c => (c.name || '').toUpperCase().trim()));
+            const missing = oldNames
+                .map(n => String(n || '').toUpperCase().trim())
+                .filter(n => n && !existing.has(n));
+
+            missing.forEach((name, i) => {
+                const id = (Date.now() + i).toString();
+                db.collection("driverCards").doc(id).set({
+                    id: id, name: name, spz: '', carrier: '', phone: '', vehicleSize: ''
+                }).catch(e => console.error('Migrace řidiče selhala:', e));
+            });
+
+            // Zapíšeme příznak, aby migrace už nikdy neběžela znovu (na žádném zařízení).
+            db.collection("settings").doc("_meta").set({ driversMigratedToCards: true }, { merge: true })
+                .catch(e => console.error('Uložení příznaku migrace řidičů selhalo:', e));
+        }
+
         // Jednorázově vytvoří Kartu zákazníka pro každé staré jméno ze seznamu "customersPickup",
         // které ještě kartu nemá. Spustí se jen jednou (příznak v settings/_meta), takže smazané
         // karty se už znovu nevytvoří.
@@ -858,9 +883,9 @@
             if (!_settingsLoaded || !_cardsLoaded) return;
             _defaultsV2Done = true;
 
-            // 1) Řidiči – nahradit výchozím seznamem
-            db.collection("settings").doc("drivers").set({ list: defaultDrivers })
-                .catch(e => console.error('Uložení výchozích řidičů selhalo:', e));
+            // 1) Řidiči – tady se dřív přepisoval starý seznam settings/drivers výchozími
+            // jmény. Od verze s jedinou Kartou řidiče už tenhle krok nedává smysl (a
+            // doběhl jen jednou, dávno) – chybějící karty teď zakládá tryMigrateDrivers().
 
             // 2) Zákazníci – doplnit chybějící karty (+ e-maily)
             const byName = {};
@@ -1033,7 +1058,7 @@
                 settings: {
                     customersDelivery: JSON.parse(localStorage.getItem('customersDelivery')) || [],
                     customersPickup: JSON.parse(localStorage.getItem('customersPickup')) || [],
-                    drivers: JSON.parse(localStorage.getItem('drivers')) || [],
+                    // 'drivers' už se sem záměrně nezahrnuje - řidiči jsou v driverCards výše.
                     carriers: JSON.parse(localStorage.getItem('carriers')) || [],
                     vehicles: JSON.parse(localStorage.getItem('vehicles')) || []
                 }
@@ -1091,7 +1116,7 @@
 
                         // Obnova číselníků z Nastavení (novější formát zálohy v2)
                         if (parsed.settings) {
-                            ['customersDelivery', 'customersPickup', 'drivers', 'carriers', 'vehicles'].forEach(key => {
+                            ['customersDelivery', 'customersPickup', 'carriers', 'vehicles'].forEach(key => {
                                 if (Array.isArray(parsed.settings[key])) {
                                     db.collection("settings").doc(key).set({ list: parsed.settings[key] });
                                     localStorage.setItem(key, JSON.stringify(parsed.settings[key]));
@@ -1133,9 +1158,17 @@
             if (snapshot.empty) {
                 db.collection("settings").doc("customersDelivery").set({ list: defaultCustomers });
                 db.collection("settings").doc("customersPickup").set({ list: defaultCustomers });
-                db.collection("settings").doc("drivers").set({ list: defaultDrivers });
                 db.collection("settings").doc("carriers").set({ list: defaultCarriers });
                 db.collection("settings").doc("vehicles").set({ list: defaultVehicles });
+                // Řidiči: od této verze je jediným zdrojem pravdy Karta řidiče (kolekce
+                // driverCards), takže při zcela prázdné databázi rovnou založíme karty
+                // z výchozího seznamu jmen – ne starý seznam settings/drivers.
+                defaultDrivers.forEach((name, i) => {
+                    const id = (Date.now() + i).toString();
+                    db.collection("driverCards").doc(id).set({
+                        id: id, name: name, spz: '', carrier: '', phone: '', vehicleSize: ''
+                    });
+                });
             } else {
                 db.collection("settings").doc("carriers").get().then(doc => {
                     if (!doc.exists) db.collection("settings").doc("carriers").set({ list: defaultCarriers });
@@ -1153,6 +1186,7 @@
                     _customersMigrated = !!meta.customersMigratedToCards;
                     _cardRenamesFlag = !!meta.cardRenamesV1Done;
                     _defaultsV2Flag = !!meta.defaultsV2Done;
+                    _driversMigratedFlag = !!meta.driversMigratedToCards;
                     return;
                 }
                 localStorage.setItem(doc.id, JSON.stringify(doc.data().list || []));
@@ -1164,6 +1198,7 @@
             tryMigrateCustomers();
             tryRenameCustomerCards();
             trySeedDefaultsV2();
+            tryMigrateDrivers();
         });
 
         db.collection("dailyTargets").onSnapshot((snapshot) => {
@@ -1206,6 +1241,13 @@
             });
             localStorage.setItem('driverCards', JSON.stringify(localDriverCards));
             renderDriverCardsList();
+            // Karta řidiče je teď jediným zdrojem seznamu jmen řidičů – při každé změně
+            // (přidání/úprava/smazání karty, i z jiného zařízení) musíme obnovit i
+            // nabídky řidičů a záložku Řidiči, ne jen samotný seznam karet v Nastavení.
+            renderDriversTab();
+            populateAllDropdowns();
+            _driverCardsLoaded = true;
+            tryMigrateDrivers();
         });
 
         db.collection("customerCards").onSnapshot((snapshot) => {
@@ -1226,7 +1268,7 @@
             // Svozoví zákazníci (svoz) teď vychází z Karet zákazníka – jeden společný seznam.
             const custPickup = getCustomerCardNames();
             const custDelivery = sortAlphabetically(JSON.parse(localStorage.getItem('customersDelivery')) || []);
-            const drivers = sortAlphabetically(JSON.parse(localStorage.getItem('drivers')) || []);
+            const drivers = getDriverCardNames();
             const carriers = sortAlphabetically(JSON.parse(localStorage.getItem('carriers')) || []);
             const vehicles = sortAlphabetically(JSON.parse(localStorage.getItem('vehicles')) || []);
 
@@ -1296,9 +1338,9 @@
         function renderDriversTab() {
             const grid = document.getElementById('driversTabGrid');
             if (!grid) return;
-            const drivers = sortAlphabetically(JSON.parse(localStorage.getItem('drivers') || '[]') || []);
+            const drivers = getDriverCardNames();
             if (drivers.length === 0) {
-                grid.innerHTML = '<p class="col-span-full text-center text-xs text-gray-400 italic py-6">Zatím žádní řidiči. Přidejte je v Nastavení → Evidence řidičů.</p>';
+                grid.innerHTML = '<p class="col-span-full text-center text-xs text-gray-400 italic py-6">Zatím žádní řidiči. Přidejte je v Nastavení → Karta řidiče.</p>';
                 return;
             }
             const dayTotals = getDayLoadTotalsByDriver(activeDate);
@@ -1622,7 +1664,7 @@
 
             const formContainer = document.getElementById('modalFormContainer');
             if (!isDone || editingPickupId) {
-                const driversList = sortAlphabetically((JSON.parse(localStorage.getItem('drivers')) || []).filter(d => isDriverActive(d)));
+                const driversList = getDriverCardNames().filter(d => isDriverActive(d));
                 const driversWithPickups = tPickups.filter(p => p.id !== editingPickupId).map(p => p.driver);
                 const availableDrivers = driversList.filter(d => !driversWithPickups.includes(d));
 
@@ -2327,17 +2369,24 @@
             updateBackupInfo();
             const custDelivery = sortAlphabetically(JSON.parse(localStorage.getItem('customersDelivery')) || []);
             const custPickup = sortAlphabetically(JSON.parse(localStorage.getItem('customersPickup')) || []);
-            const drvs = sortAlphabetically(JSON.parse(localStorage.getItem('drivers')) || []);
             const carriers = sortAlphabetically(JSON.parse(localStorage.getItem('carriers')) || []);
             const vehicles = sortAlphabetically(JSON.parse(localStorage.getItem('vehicles')) || []);
             
             function buildList(arr, key) {
-                return arr.map((item, idx) => `
+                // POZOR: maže se podle PŘESNÉ HODNOTY položky, ne podle jejího pořadového
+                // indexu v tomto (česky seřazeném) seznamu. Index totiž neodpovídal pořadí,
+                // v jakém je seznam uložený v localStorage/Firestore (tam se řadí obyčejným
+                // list.sort(), který diakritiku řadí jinak než čeština) – to byla příčina
+                // mazání "jiné" položky o řádek/dva níže. Viz funkce removeItem().
+                return arr.map((item) => {
+                    const safe = String(item).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                    return `
                     <div class="flex justify-between items-center bg-white border border-gray-200 p-3 rounded-xl shadow-sm font-bold uppercase transition-all hover:bg-slate-50">
                         <span class="font-bold text-slate-800 text-xs tracking-wide">${item}</span>
-                        <button onclick="removeItem('${key}', ${idx})" class="text-[#e30613] font-bold px-2 hover:text-red-700 transition-transform active:scale-90 text-sm">✕</button>
+                        <button onclick="removeItem('${key}', '${safe}')" class="text-[#e30613] font-bold px-2 hover:text-red-700 transition-transform active:scale-90 text-sm">✕</button>
                     </div>
-                `).join('');
+                `;
+                }).join('');
             }
 
             // Některé seznamy už v Nastavení nemají svou kartu (byly odstraněny) – proto ošetříme,
@@ -2345,7 +2394,6 @@
             const setListHTML = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
             setListHTML('settingsCustomersDeliveryList', buildList(custDelivery, 'customersDelivery'));
             setListHTML('settingsCustomersPickupList', buildList(custPickup, 'customersPickup'));
-            setListHTML('settingsDriversList', buildList(drvs, 'drivers'));
             setListHTML('settingsCarriersList', buildList(carriers, 'carriers'));
             setListHTML('settingsVehiclesList', buildList(vehicles, 'vehicles'));
 
@@ -2367,9 +2415,16 @@
             input.value = '';
         }
 
-        function removeItem(key, index) {
+        function removeItem(key, value) {
             let list = JSON.parse(localStorage.getItem(key)) || [];
-            list.splice(index, 1);
+            const idx = list.indexOf(value);
+            if (idx === -1) {
+                // Položka se v uloženém seznamu nenašla (např. ji mezitím smazal kolega
+                // na jiném zařízení) – radši nic nesmažeme, než smazat omylem něco jiného.
+                alert("Tuto položku se nepodařilo najít v seznamu (možná ji mezitím někdo smazal jinde). Obnovte prosím stránku (F5) a zkuste to znovu.");
+                return;
+            }
+            list.splice(idx, 1);
             db.collection("settings").doc(key).set({ list: list }).catch(e => alert("Chyba při mazání: " + e.message));
         }
 
@@ -2428,7 +2483,18 @@
             if (!name) { alert("Zadejte prosím jméno řidiče!"); return; }
 
             const cardId = idInput.value || Date.now().toString();
-            
+
+            // Karta řidiče je teď jediným zdrojem pravdy o jméně řidiče (nahrazuje starou
+            // "Evidenci řidičů") – proto tu hlídáme, aby nevznikly dvě karty se stejným
+            // jménem (to by pak dělalo nejednoznačnost všude, kde se řidič vybírá podle jména).
+            const isDuplicateName = (localDriverCards || []).some(c =>
+                (c.name || '').toUpperCase().trim() === name && (c.id || c.docId) !== cardId
+            );
+            if (isDuplicateName) {
+                alert("Řidič se jménem \"" + name + "\" už v evidenci existuje. Zvolte prosím jiné jméno, nebo upravte existující kartu.");
+                return;
+            }
+
             db.collection("driverCards").doc(cardId).set({
                 id: cardId,
                 name: name,
