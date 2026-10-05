@@ -2,7 +2,8 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <!-- v4.2: povolen zoom (přístupnost). Auto-zoom na iOS řeší písmo 16 px v polích (viz CSS níže). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Geis - Dispečink Svozů</title>
     <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="manifest" href="manifest.json">
@@ -82,17 +83,62 @@
             background-color: #1e293b;
             border-color: #334155;
         }
-        body.dark .bg-[#e6f0fa] {
+        /* v4.2: hranaté závorky v názvu třídy musí být v CSS escapované,
+           jinak prohlížeč celé pravidlo zahodí (dřív se tak tiše ignorovalo). */
+        body.dark .bg-\[\#e6f0fa\] {
             background-color: #1e3a5f;
             color: #e2e8f0;
         }
-        body.dark .bg-[#4abe6a] {
-            background-color: #0e6229;
+        body.dark .bg-\[\#15803d\] {
+            background-color: #166534;
             color: #ffffff;
         }
         body.dark .text-gray-500 {
             color: #94a3b8;
         }
+        body.dark .text-gray-400 {
+            color: #94a3b8;
+        }
+        body.dark .bg-gray-100,
+        body.dark .bg-gray-200 {
+            background-color: #334155;
+            color: #f1f5f9;
+        }
+        body.dark .text-slate-800,
+        body.dark .text-slate-800 {
+            color: #e2e8f0;
+        }
+        body.dark .text-\[\#003366\] {
+            color: #93c5fd;
+        }
+        body.dark .bg-\[\#f1f5f9\] {
+            background-color: #1e293b;
+            color: #e2e8f0;
+        }
+
+        /* štítky na světlém podkladu si v tmavém režimu nechají tmavě modrý text */
+        body.dark .bg-white\/80.text-\[\#003366\] {
+            color: #003366;
+        }
+        body.dark .bg-gray-200\/70 {
+            background-color: #0f172a;
+        }
+        body.dark .bg-\[\#166534\] {
+            background-color: #14532d;
+        }
+
+        /* v4.2: iOS přibližuje stránku při ťuknutí do pole s písmem < 16 px.
+           Místo zákazu zoomu dáme polím na iOS 16 px. */
+        @supports (-webkit-touch-callout: none) {
+            input, select, textarea { font-size: 16px !important; }
+        }
+
+        /* v4.2: jednotné SVG ikony – zarovnání s textem */
+        .ico { display: inline-block; vertical-align: -0.2em; flex-shrink: 0; }
+
+        /* v4.2: Changelog – seznam novinek */
+        #changelogModal li::marker { color: #003366; }
+        body.dark #changelogModal li::marker { color: #93c5fd; }
 
         /* Úvodní obrazovka (splash) - zobrazí se hned při spuštění, než se vše načte.
            Používá jen vlastní CSS (ne Tailwind), aby se ukázala okamžitě. */
@@ -144,33 +190,40 @@
     </script>
 
     <!-- Záhlaví s kalendářem -->
-    <header class="bg-white text-slate-900 p-3 shadow-md sticky top-0 z-20 border-b-4 border-[#003366] flex flex-col gap-2">
-        <!-- Datum přes celou šířku (klik = skok na dnešek) -->
-        <p class="text-[9px] text-slate-500 font-bold uppercase tracking-wider truncate cursor-pointer hover:text-[#003366] active:scale-95 transition-transform"
-           id="currentDateDisplay" onclick="jumpToToday()" title="Skočit na dnešek"></p>
-
-        <div class="flex justify-between items-start gap-2">
-            <!-- Velké logo -->
-            <img src="geis-logo.png" alt="Geis Logo" class="h-20 w-auto object-contain shrink-0" onerror="this.style.display='none'">
-
-            <!-- Ovládání kalendáře + vyhledávání, napravo pod sebou -->
-            <div class="flex flex-col items-end gap-2 shrink-0">
-                <div id="headerDateControls" class="flex items-center gap-1">
-                    <button onclick="stepDate(-1)" class="w-8 h-8 flex items-center justify-center bg-white active:bg-gray-200 border border-gray-300 rounded text-xs font-bold text-slate-700 shadow-sm transition-colors">◀</button>
-                    <input type="date" id="appDatePicker" onchange="setDate(this.value)" class="h-8 text-[11px] font-bold text-[#003366] dark:text-blue-300 border border-gray-300 rounded px-1.5 bg-white dark:bg-slate-850 text-center focus:outline-none shadow-sm cursor-pointer w-[100px] sm:w-[115px]">
-                    <button onclick="stepDate(1)" class="w-8 h-8 flex items-center justify-center bg-white active:bg-gray-200 border border-gray-300 rounded text-xs font-bold text-slate-700 shadow-sm transition-colors">▶</button>
+    <header class="bg-white text-slate-900 px-3 pt-2 pb-2 shadow-md sticky top-0 z-20 border-b-4 border-[#003366] flex flex-col gap-2">
+        <!-- v4.2: kompaktní hlavička – malé logo, datum jako hlavní nadpis, přepínač tmavého režimu -->
+        <div class="flex items-center gap-2.5">
+            <img src="geis-logo.png" alt="Geis" class="h-9 w-auto object-contain shrink-0" onerror="this.style.display='none'">
+            <button type="button" onclick="jumpToToday()" title="Skočit na dnešek" class="flex-1 min-w-0 text-left active:scale-[0.98] transition-transform">
+                <div class="flex items-center gap-2">
+                    <span id="headerDateTitle" class="text-xl font-bold text-[#003366] leading-tight">–</span>
+                    <span id="headerDayBadge" class="text-xs font-bold px-2 py-0.5 rounded-full border">Dnes</span>
                 </div>
+                <p id="currentDateDisplay" class="text-xs text-slate-500 truncate leading-tight"></p>
+            </button>
+            <button type="button" onclick="toggleDarkMode()" title="Přepnout tmavý / světlý režim" aria-label="Přepnout tmavý režim"
+                    class="w-10 h-10 shrink-0 flex items-center justify-center rounded-full border border-gray-300 text-[#003366] bg-white active:bg-gray-200 shadow-sm">
+                <svg id="themeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"></svg>
+            </button>
+        </div>
 
-                <!-- Globální vyhledávací pole -->
-                <div class="relative w-52" id="globalSearchContainer">
-                    <input type="text" id="globalDriverSearch" oninput="performGlobalDriverSearch(this.value)" placeholder="VYHLEDAT ŘIDIČE" class="w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg py-1.5 px-3 pr-8 text-[11px] font-bold outline-none focus:border-[#003366] uppercase text-[#003366] dark:text-blue-300 placeholder-gray-500 shadow-sm">
-                    <span class="absolute right-2.5 top-2.5 text-gray-500">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    </span>
+        <!-- Ovládání kalendáře + vyhledávání (jen v Mřížce a Návěsech) -->
+        <div id="headerRow2" class="flex items-center gap-2">
+            <div id="headerDateControls" class="flex items-center gap-1 shrink-0">
+                <button onclick="stepDate(-1)" aria-label="Předchozí den" class="w-9 h-9 flex items-center justify-center bg-white active:bg-gray-200 border border-gray-300 rounded-lg text-sm font-bold text-slate-700 shadow-sm transition-colors">◀</button>
+                <input type="date" id="appDatePicker" onchange="setDate(this.value)" class="h-9 text-sm font-bold text-[#003366] dark:text-blue-300 border border-gray-300 rounded-lg px-1.5 bg-white dark:bg-slate-800 text-center focus:outline-none shadow-sm cursor-pointer w-[128px]">
+                <button onclick="stepDate(1)" aria-label="Další den" class="w-9 h-9 flex items-center justify-center bg-white active:bg-gray-200 border border-gray-300 rounded-lg text-sm font-bold text-slate-700 shadow-sm transition-colors">▶</button>
+            </div>
 
-                    <!-- Plovoucí karta výsledků vyhledávání -->
-                    <div id="globalSearchResults" class="absolute right-0 top-11 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-300 p-3 max-w-sm w-72 hidden z-30"></div>
-                </div>
+            <!-- Globální vyhledávací pole -->
+            <div class="relative flex-1 min-w-0" id="globalSearchContainer">
+                <input type="text" id="globalDriverSearch" oninput="performGlobalDriverSearch(this.value)" placeholder="Hledat řidiče" class="w-full h-9 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg px-3 pr-8 text-sm font-bold outline-none focus:border-[#003366] uppercase placeholder:normal-case text-[#003366] dark:text-blue-300 placeholder-gray-500 shadow-sm">
+                <span class="absolute right-2.5 top-2.5 text-gray-500 pointer-events-none">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </span>
+
+                <!-- Plovoucí karta výsledků vyhledávání -->
+                <div id="globalSearchResults" class="absolute right-0 top-11 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-300 p-3 w-80 max-w-[calc(100vw-1.5rem)] hidden z-30"></div>
             </div>
         </div>
     </header>
@@ -179,10 +232,10 @@
     <main id="tab-counter" class="active-tab p-4 space-y-5">
         <!-- Formulář aktivace zákazníka (čistě bílá pole) -->
         <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-300">
-            <h2 class="text-xs font-black text-slate-850 uppercase tracking-wider mb-3">Aktivovat zákazníka pro vybraný den</h2>
+            <h2 class="text-xs font-bold text-slate-800 mb-3">Aktivovat zákazníka pro vybraný den</h2>
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-4 mb-3">
                 <div class="sm:col-span-2">
-                    <label class="text-[11px] font-black text-slate-700 uppercase">Zákazník</label>
+                    <label class="text-xs font-bold text-slate-700 uppercase">Zákazník</label>
                     <div class="flex gap-2 mt-1">
                         <select id="targetCustomer" class="w-full bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg p-2 text-sm outline-none font-bold h-10 shadow-sm focus:border-[#003366] text-slate-800 dark:text-white">
                             <option value="" disabled selected>Vyberte zákazníka...</option>
@@ -192,20 +245,20 @@
                 </div>
                 <div class="sm:col-span-2 grid grid-cols-3 gap-2">
                     <div>
-                        <label class="text-[11px] font-black text-slate-700 uppercase">Cíl FP</label>
-                        <input type="number" id="targetFP" placeholder="0" min="0" class="w-full bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg p-2 mt-1 text-sm text-center font-bold h-10 shadow-sm focus:border-[#003366] text-slate-850 dark:text-white focus:ring-1 focus:ring-[#003366]" onfocus="this.select()">
+                        <label class="text-xs font-bold text-slate-700 uppercase">Cíl FP</label>
+                        <input type="number" id="targetFP" placeholder="0" min="0" class="w-full bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg p-2 mt-1 text-sm text-center font-bold h-10 shadow-sm focus:border-[#003366] text-slate-800 dark:text-white focus:ring-1 focus:ring-[#003366]" onfocus="this.select()">
                     </div>
                     <div>
-                        <label class="text-[11px] font-black text-slate-700 uppercase">Cíl KH</label>
-                        <input type="number" id="targetKH" placeholder="0" min="0" class="w-full bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg p-2 mt-1 text-sm text-center font-bold h-10 shadow-sm focus:border-[#003366] text-slate-850 dark:text-white focus:ring-1 focus:ring-[#003366]" onfocus="this.select()">
+                        <label class="text-xs font-bold text-slate-700 uppercase">Cíl KH</label>
+                        <input type="number" id="targetKH" placeholder="0" min="0" class="w-full bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg p-2 mt-1 text-sm text-center font-bold h-10 shadow-sm focus:border-[#003366] text-slate-800 dark:text-white focus:ring-1 focus:ring-[#003366]" onfocus="this.select()">
                     </div>
                     <div>
-                        <label class="text-[11px] font-black text-slate-700 uppercase">Cíl PK</label>
-                        <input type="number" id="targetPK" placeholder="0" min="0" class="w-full bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg p-2 mt-1 text-sm text-center font-bold h-10 shadow-sm focus:border-[#003366] text-slate-850 dark:text-white focus:ring-1 focus:ring-[#003366]" onfocus="this.select()">
+                        <label class="text-xs font-bold text-slate-700 uppercase">Cíl PK</label>
+                        <input type="number" id="targetPK" placeholder="0" min="0" class="w-full bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg p-2 mt-1 text-sm text-center font-bold h-10 shadow-sm focus:border-[#003366] text-slate-800 dark:text-white focus:ring-1 focus:ring-[#003366]" onfocus="this.select()">
                     </div>
                 </div>
             </div>
-            <button onclick="createDailyTarget()" class="w-full bg-[#003366] hover:bg-[#002244] text-white font-bold py-3 rounded-lg text-xs transition-colors shadow-sm active:scale-[0.99] uppercase tracking-wider">
+            <button onclick="createDailyTarget()" class="w-full bg-[#003366] hover:bg-[#002244] text-white font-bold py-3 rounded-lg text-xs transition-colors shadow-sm active:scale-[0.99]">
                 Přidat na přehled svozu
             </button>
         </div>
@@ -213,10 +266,10 @@
         <!-- Mřížka sledování -->
         <div>
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-                <h3 class="font-black text-[#003366] text-xs uppercase tracking-wider">Aktivní sledování odběru</h3>
+                <h3 class="font-bold text-[#003366] text-xs">Aktivní sledování odběru</h3>
                 <div class="flex items-center gap-2 self-start sm:self-auto">
                     <!-- Tlačítko pro export detailních denních dat svozu -->
-                    <button onclick="exportDailyDetailedToExcel()" class="bg-[#4abe6a] hover:bg-emerald-600 text-white text-[11px] font-bold py-1.5 px-3 rounded-lg flex items-center gap-1 shadow-sm transition-colors uppercase">
+                    <button onclick="exportDailyDetailedToExcel()" class="bg-[#15803d] hover:bg-green-800 text-white text-xs font-bold py-1.5 px-3 rounded-lg flex items-center gap-1 shadow-sm transition-colors">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                         Export dne
                     </button>
@@ -237,11 +290,11 @@
     <main id="tab-trailers" class="hidden-tab p-4 space-y-5">
         <div id="trailerOverviewContainer" class="space-y-4">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <h3 class="font-bold text-[#003366] text-xs uppercase tracking-wider">Denní plán nasazení návěsů</h3>
+                <h3 class="font-bold text-[#003366] text-xs">Denní plán nasazení návěsů</h3>
                 <div class="flex items-center gap-2">
                     <input type="text" id="trailerDriverSearch" oninput="renderTrailersTab()" placeholder="Hledat..." class="bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg py-1 px-2.5 text-xs font-bold outline-none focus:border-[#003366] uppercase text-[#003366] dark:text-blue-300 w-32 sm:w-40">
-                    <button onclick="showNewTrailerForm()" class="bg-[#003366] hover:bg-[#002244] text-white font-bold text-xs py-2 px-4 rounded-lg uppercase tracking-wider shadow-sm transition-transform active:scale-95">
-                        NOVÝ PLÁN
+                    <button onclick="showNewTrailerForm()" class="bg-[#003366] hover:bg-[#002244] text-white font-bold text-xs py-2 px-4 rounded-lg shadow-sm transition-transform active:scale-95">
+                        Nový plán
                     </button>
                 </div>
             </div>
@@ -252,8 +305,8 @@
     <!-- Řidiči: přepínání aktivní / neaktivní -->
     <main id="tab-drivers" class="hidden-tab p-4 space-y-4">
         <div>
-            <h3 class="font-black text-[#003366] text-xs uppercase tracking-wider">Řidiči – aktivní / neaktivní</h3>
-            <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Ťuknutím na jméno přepnete řidiče na <b class="text-green-700">aktivní</b> (zeleně) nebo <b class="text-red-700">neaktivní</b> (červeně). V Mřížce se pak při zapisování nakládky nabízejí jen aktivní řidiči.</p>
+            <h3 class="font-bold text-[#003366] text-xs">Řidiči – aktivní / neaktivní</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Ťuknutím na jméno přepnete řidiče na <b class="text-green-700">aktivní</b> (zeleně) nebo <b class="text-red-700">neaktivní</b> (červeně). V Mřížce se pak při zapisování nakládky nabízejí jen aktivní řidiči.</p>
         </div>
         <div id="driversTabGrid" class="grid grid-cols-3 gap-2"></div>
     </main>
@@ -263,7 +316,7 @@
         <div class="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-xl flex flex-col max-h-[90vh] border border-gray-200">
             <div class="bg-[#003366] p-4 text-white flex justify-between items-start border-b-4 border-[#002244]">
                 <div>
-                    <div id="modalCustomerName" class="text-xl font-black leading-tight uppercase text-white">---</div>
+                    <div id="modalCustomerName" class="text-xl font-bold leading-tight uppercase text-white">---</div>
                     <p id="modalTargetInfo" class="text-xs text-slate-200 mt-0.5 font-medium">---</p>
                 </div>
                 <button onclick="closeDetails()" class="bg-[#002244] hover:bg-[#001530] text-white rounded-full p-1.5 text-xs font-bold w-7 h-7 flex items-center justify-center transition-colors">✕</button>
@@ -274,21 +327,21 @@
 
                 <div class="grid grid-cols-3 gap-1.5">
                     <div id="modalFPBox" class="text-center p-2 rounded-xl border">
-                        <span id="modalFPLabel" class="text-[9px] uppercase font-bold text-gray-400 block tracking-wider">FP</span>
-                        <span id="modalRemainingFP" class="text-lg font-black">0</span>
+                        <span id="modalFPLabel" class="text-xs uppercase font-bold text-gray-400 block tracking-wider">FP</span>
+                        <span id="modalRemainingFP" class="text-lg font-bold">0</span>
                     </div>
                     <div id="modalKHBox" class="text-center p-2 rounded-xl border">
-                        <span id="modalKHLabel" class="text-[9px] uppercase font-bold text-gray-400 block tracking-wider">KH</span>
-                        <span id="modalRemainingKH" class="text-lg font-black">0</span>
+                        <span id="modalKHLabel" class="text-xs uppercase font-bold text-gray-400 block tracking-wider">KH</span>
+                        <span id="modalRemainingKH" class="text-lg font-bold">0</span>
                     </div>
                     <div id="modalPKBox" class="text-center p-2 rounded-xl border">
-                        <span id="modalPKLabel" class="text-[9px] uppercase font-bold text-gray-400 block tracking-wider">PK</span>
-                        <span id="modalRemainingPK" class="text-lg font-black">0</span>
+                        <span id="modalPKLabel" class="text-xs uppercase font-bold text-gray-400 block tracking-wider">PK</span>
+                        <span id="modalRemainingPK" class="text-lg font-bold">0</span>
                     </div>
                 </div>
 
                 <div class="space-y-2">
-                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Historie nakládek vozidel:</p>
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Historie nakládek vozidel:</p>
                     <div id="modalHistoryContainer" class="space-y-1.5 max-h-48 overflow-y-auto pr-1"></div>
                 </div>
                 
@@ -301,12 +354,39 @@
         </div>
     </div>
 
+    <!-- v4.2: Modální okno úpravy cíle (FP / KH / PK najednou) -->
+    <div id="editTargetModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4" onclick="if(event.target===this)closeEditTarget()">
+        <div class="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-xl border border-gray-200">
+            <div class="bg-[#003366] p-4 text-white flex justify-between items-start border-b-4 border-[#002244]">
+                <div class="min-w-0">
+                    <h2 class="text-lg font-bold leading-tight text-white">Upravit cíl svozu</h2>
+                    <p id="editTargetCustomer" class="text-sm text-slate-200 mt-0.5 truncate">---</p>
+                </div>
+                <button onclick="closeEditTarget()" aria-label="Zavřít" class="bg-[#002244] hover:bg-[#001530] text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">✕</button>
+            </div>
+            <form class="p-4 space-y-4" onsubmit="event.preventDefault(); saveEditTarget();">
+                <div class="grid grid-cols-3 gap-2">
+                    <label class="block"><span class="text-xs font-bold text-slate-700 uppercase">Cíl FP</span>
+                        <input type="number" inputmode="numeric" id="editTargetFP" min="0" onfocus="this.select()" class="w-full bg-white border border-gray-300 rounded-lg p-2 mt-1 text-lg text-center font-bold h-12 focus:border-[#003366] focus:ring-1 focus:ring-[#003366] text-slate-800"></label>
+                    <label class="block"><span class="text-xs font-bold text-slate-700 uppercase">Cíl KH</span>
+                        <input type="number" inputmode="numeric" id="editTargetKH" min="0" onfocus="this.select()" class="w-full bg-white border border-gray-300 rounded-lg p-2 mt-1 text-lg text-center font-bold h-12 focus:border-[#003366] focus:ring-1 focus:ring-[#003366] text-slate-800"></label>
+                    <label class="block"><span class="text-xs font-bold text-slate-700 uppercase">Cíl PK</span>
+                        <input type="number" inputmode="numeric" id="editTargetPK" min="0" onfocus="this.select()" class="w-full bg-white border border-gray-300 rounded-lg p-2 mt-1 text-lg text-center font-bold h-12 focus:border-[#003366] focus:ring-1 focus:ring-[#003366] text-slate-800"></label>
+                </div>
+                <div class="flex gap-2">
+                    <button type="submit" id="btnSaveEditTarget" class="flex-1 bg-[#003366] hover:bg-[#002244] text-white font-bold py-3 rounded-lg text-sm shadow-sm active:scale-[0.99] disabled:opacity-60">Uložit změny</button>
+                    <button type="button" onclick="closeEditTarget()" class="bg-gray-200 hover:bg-gray-300 text-slate-700 px-4 py-3 rounded-lg font-bold text-sm">Zrušit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Modální okno plánování návěsu -->
     <div id="trailerPlanModal" class="fixed inset-0 z-30 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
-        <div class="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md overflow-hidden shadow-xl flex flex-col max-h-[90vh] border border-gray-200 dark:border-slate-750">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md overflow-hidden shadow-xl flex flex-col max-h-[90vh] border border-gray-200 dark:border-slate-700">
             <div class="bg-[#003366] p-4 text-white flex justify-between items-start border-b-4 border-[#002244]">
                 <div>
-                    <h2 id="trailerModalTitle" class="text-lg font-black leading-tight uppercase text-white">Zapsat plán návěsu (33 EUR)</h2>
+                    <h2 id="trailerModalTitle" class="text-lg font-bold leading-tight text-white">Zapsat plán návěsu (33 EUR)</h2>
                     <p class="text-xs text-slate-200 mt-0.5 font-medium">Plánování nasazení na den</p>
                 </div>
                 <button onclick="closeTrailerModal()" class="bg-[#002244] hover:bg-[#001530] text-white rounded-full p-1.5 text-xs font-bold w-7 h-7 flex items-center justify-center transition-colors">✕</button>
@@ -315,23 +395,23 @@
             <div class="p-4 space-y-4 overflow-y-auto flex-1">
                 <div class="space-y-3">
                     <div>
-                        <label class="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Interní řidič</label>
+                        <label class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Interní řidič</label>
                         <div class="flex gap-2 mt-1">
-                            <select id="trailerDriverSelect" class="w-full bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-750 rounded-lg p-2 text-sm outline-none font-medium h-10 shadow-sm focus:border-[#003366] text-slate-800 dark:text-white">
+                            <select id="trailerDriverSelect" class="w-full bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg p-2 text-sm outline-none font-medium h-10 shadow-sm focus:border-[#003366] text-slate-800 dark:text-white">
                                 <option value="" disabled selected>Vyberte řidiče...</option>
                             </select>
                         </div>
                     </div>
 
                     <div>
-                        <label class="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">SPZ Návěsu</label>
-                        <input type="text" id="trailerSPZInput" placeholder="Např. 3H1 1234" class="w-full bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-750 rounded-lg p-2 mt-1 text-sm font-bold uppercase h-10 shadow-sm focus:border-[#003366] text-slate-800 dark:text-white">
+                        <label class="text-xs font-semibold text-gray-400 uppercase tracking-wide">SPZ Návěsu</label>
+                        <input type="text" id="trailerSPZInput" placeholder="Např. 3H1 1234" class="w-full bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg p-2 mt-1 text-sm font-bold uppercase h-10 shadow-sm focus:border-[#003366] text-slate-800 dark:text-white">
                     </div>
 
                     <div>
-                        <label class="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Přiřadit rozvoz (zákazník)</label>
+                        <label class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Přiřadit rozvoz (zákazník)</label>
                         <div class="flex gap-2 mt-1">
-                            <select id="trailerDeliverySelect" onchange="autoAddDraftCustomer('delivery', this)" class="w-full bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-750 rounded-lg p-2 text-sm outline-none font-medium h-10 shadow-sm focus:border-[#003366] text-slate-800 dark:text-white">
+                            <select id="trailerDeliverySelect" onchange="autoAddDraftCustomer('delivery', this)" class="w-full bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg p-2 text-sm outline-none font-medium h-10 shadow-sm focus:border-[#003366] text-slate-800 dark:text-white">
                                 <option value="" disabled selected>Vyberte rozvoz...</option>
                             </select>
                             <button onclick="quickAddCustomer('delivery')" class="bg-[#003366] text-white font-bold px-3 rounded-lg h-10 hover:bg-black transition-colors" title="Rychle vytvořit rozvozového zákazníka">+</button>
@@ -340,9 +420,9 @@
                     </div>
 
                     <div>
-                        <label class="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Přiřadit svoz (zákazník)</label>
+                        <label class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Přiřadit svoz (zákazník)</label>
                         <div class="flex gap-2 mt-1">
-                            <select id="trailerPickupSelect" onchange="autoAddDraftCustomer('pickup', this)" class="w-full bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-750 rounded-lg p-2 text-sm outline-none font-medium h-10 shadow-sm focus:border-[#003366] text-slate-800 dark:text-white">
+                            <select id="trailerPickupSelect" onchange="autoAddDraftCustomer('pickup', this)" class="w-full bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg p-2 text-sm outline-none font-medium h-10 shadow-sm focus:border-[#003366] text-slate-800 dark:text-white">
                                 <option value="" disabled selected>Vyberte svoz...</option>
                             </select>
                             <button onclick="quickAddCustomer('pickup')" class="bg-[#003366] text-white font-bold px-3 rounded-lg h-10 hover:bg-black transition-colors" title="Rychle vytvořit svozového zákazníka">+</button>
@@ -352,10 +432,10 @@
                 </div>
 
                 <div class="pt-4 border-t border-gray-100 dark:border-slate-700 flex gap-2">
-                    <button id="btnSaveTrailerPlan" onclick="saveTrailerPlan()" class="flex-1 bg-[#003366] hover:bg-[#002244] text-white font-bold py-3 rounded-lg text-xs transition-colors shadow-sm active:scale-[0.99] uppercase tracking-wider">
+                    <button id="btnSaveTrailerPlan" onclick="saveTrailerPlan()" class="flex-1 bg-[#003366] hover:bg-[#002244] text-white font-bold py-3 rounded-lg text-xs transition-colors shadow-sm active:scale-[0.99]">
                         Uložit plán řidiče na tento den
                     </button>
-                    <button onclick="closeTrailerModal()" class="bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 px-4 py-3 rounded-lg font-bold text-xs transition-colors uppercase tracking-wider">
+                    <button onclick="closeTrailerModal()" class="bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 px-4 py-3 rounded-lg font-bold text-xs transition-colors">
                         Zrušit
                     </button>
                 </div>
@@ -368,7 +448,7 @@
         <div class="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-xl flex flex-col max-h-[90vh] border border-gray-200">
             <div class="bg-[#003366] p-4 text-white flex justify-between items-start border-b-4 border-[#002244] shrink-0">
                 <div>
-                    <h2 id="driverCardModalTitle" class="text-lg font-black leading-tight uppercase text-white">---</h2>
+                    <h2 id="driverCardModalTitle" class="text-lg font-bold leading-tight text-white">---</h2>
                     <p id="driverCardModalSubtitle" class="text-xs text-slate-200 mt-0.5 font-medium">Karta řidiče</p>
                 </div>
                 <button onclick="closeDriverCardModal()" class="bg-[#002244] hover:bg-[#001530] text-white rounded-full p-1.5 text-xs font-bold w-7 h-7 flex items-center justify-center transition-colors">✕</button>
@@ -382,7 +462,7 @@
         <div class="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-xl flex flex-col border border-gray-200">
             <div class="bg-[#003366] p-4 text-white flex justify-between items-start border-b-4 border-[#002244]">
                 <div>
-                    <h2 id="customerCardModalTitle" class="text-lg font-black leading-tight uppercase text-white">---</h2>
+                    <h2 id="customerCardModalTitle" class="text-lg font-bold leading-tight text-white">---</h2>
                     <p class="text-xs text-slate-200 mt-0.5 font-medium">Karta zákazníka</p>
                 </div>
                 <button onclick="closeCustomerCardModal()" class="bg-[#002244] hover:bg-[#001530] text-white rounded-full p-1.5 text-xs font-bold w-7 h-7 flex items-center justify-center transition-colors">✕</button>
@@ -395,10 +475,10 @@
     <main id="tab-sandbox" class="hidden-tab p-4 space-y-4">
         <div class="flex justify-between items-center gap-2">
             <div>
-                <h2 class="text-lg font-bold text-[#003366] uppercase tracking-tight">Pískoviště</h2>
-                <p class="text-[11px] text-gray-500 dark:text-gray-400">Orientační rozdělení řidičů na směry – bez vazby na konkrétní den, klidně si to přes den přepisuj.</p>
+                <h2 class="text-lg font-bold text-[#003366] tracking-tight">Pískoviště</h2>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Orientační rozdělení řidičů na směry – bez vazby na konkrétní den, klidně si to přes den přepisuj.</p>
             </div>
-            <button onclick="clearSandboxPlan()" class="shrink-0 bg-white hover:bg-gray-50 text-[#e30613] border border-red-200 text-[10px] font-bold py-1.5 px-2.5 rounded-lg uppercase tracking-wider transition-colors">
+            <button onclick="clearSandboxPlan()" class="shrink-0 bg-white hover:bg-gray-50 text-[#e30613] border border-red-200 text-xs font-bold py-1.5 px-2.5 rounded-lg transition-colors">
                 Vymazat vše
             </button>
         </div>
@@ -411,7 +491,7 @@
         <!-- KARTA ZÁKAZNÍKA -->
         <details class="bg-white rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden group" id="details-customer-cards" open>
             <summary class="flex justify-between items-center p-4 cursor-pointer font-bold text-xs select-none list-none transition-all duration-200 bg-[#003366] text-white group-open:bg-blue-50 group-open:text-[#003366] group-open:border-b group-open:border-blue-100">
-                <span class="flex items-center gap-1.5 uppercase tracking-wider">🏢 KARTA ZÁKAZNÍKA</span>
+                <span class="flex items-center gap-2 text-sm"><svg class="ico w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/></svg> Karta zákazníka</span>
                 <span class="flex items-center gap-2">
                     <button type="button" onclick="toggleCustomerCardForm(event)" class="bg-[#003366] text-white font-bold w-7 h-7 flex items-center justify-center rounded-lg text-lg leading-none hover:bg-black transition-colors shadow-sm" title="Přidat nového zákazníka">+</button>
                     <span class="transition-transform duration-200 group-open:rotate-180 text-white group-open:text-[#003366]">▼</span>
@@ -420,36 +500,36 @@
             <div class="p-4 space-y-4">
                 <div id="customerCardFormBox" class="hidden bg-gray-50 dark:bg-slate-900 p-3.5 rounded-xl border border-gray-200 dark:border-slate-800 space-y-3">
                     <input type="hidden" id="editCustomerCardId" value="">
-                    <h4 id="customerCardFormTitle" class="text-xs font-black text-[#003366] dark:text-blue-300 uppercase tracking-wide">Nový profil zákazníka</h4>
+                    <h4 id="customerCardFormTitle" class="text-xs font-bold text-[#003366] dark:text-blue-300">Nový profil zákazníka</h4>
                     
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                         <div>
-                            <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Název zákazníka</label>
-                            <input type="text" id="customerCardName" placeholder="Např. HP TRONIC" class="w-full bg-white dark:bg-slate-850 border border-gray-300 rounded-lg p-2 text-xs font-bold uppercase outline-none focus:border-[#003366] text-black dark:text-white">
+                            <label class="text-xs font-bold text-gray-400 uppercase tracking-wide">Název zákazníka</label>
+                            <input type="text" id="customerCardName" placeholder="Např. HP TRONIC" class="w-full bg-white dark:bg-slate-800 border border-gray-300 rounded-lg p-2 text-xs font-bold uppercase outline-none focus:border-[#003366] text-black dark:text-white">
                         </div>
                         <div>
-                            <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Kontaktní osoba</label>
-                            <input type="text" id="customerCardContact" placeholder="Např. Jan Novák" class="w-full bg-white dark:bg-slate-850 border border-gray-300 rounded-lg p-2 text-xs font-semibold outline-none focus:border-[#003366] text-black dark:text-white">
+                            <label class="text-xs font-bold text-gray-400 uppercase tracking-wide">Kontaktní osoba</label>
+                            <input type="text" id="customerCardContact" placeholder="Např. Jan Novák" class="w-full bg-white dark:bg-slate-800 border border-gray-300 rounded-lg p-2 text-xs font-semibold outline-none focus:border-[#003366] text-black dark:text-white">
                         </div>
                         <div>
-                            <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Telefonní číslo</label>
-                            <input type="tel" id="customerCardPhone" placeholder="Např. +420 601 234 567" class="w-full bg-white dark:bg-slate-850 border border-gray-300 rounded-lg p-2 text-xs font-semibold outline-none focus:border-[#003366] text-black dark:text-white">
+                            <label class="text-xs font-bold text-gray-400 uppercase tracking-wide">Telefonní číslo</label>
+                            <input type="tel" id="customerCardPhone" placeholder="Např. +420 601 234 567" class="w-full bg-white dark:bg-slate-800 border border-gray-300 rounded-lg p-2 text-xs font-semibold outline-none focus:border-[#003366] text-black dark:text-white">
                         </div>
                         <div>
-                            <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wide">E-mail</label>
-                            <input type="email" id="customerCardEmail" placeholder="Např. info@firma.cz" class="w-full bg-white dark:bg-slate-850 border border-gray-300 rounded-lg p-2 text-xs font-semibold outline-none focus:border-[#003366] text-black dark:text-white">
+                            <label class="text-xs font-bold text-gray-400 uppercase tracking-wide">E-mail</label>
+                            <input type="email" id="customerCardEmail" placeholder="Např. info@firma.cz" class="w-full bg-white dark:bg-slate-800 border border-gray-300 rounded-lg p-2 text-xs font-semibold outline-none focus:border-[#003366] text-black dark:text-white">
                         </div>
                         <div class="sm:col-span-2">
-                            <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Adresa provozovny</label>
-                            <input type="text" id="customerCardAddress" placeholder="Ulice, č.p., Město" class="w-full bg-white dark:bg-slate-850 border border-gray-300 rounded-lg p-2 text-xs font-semibold outline-none focus:border-[#003366] text-black dark:text-white">
+                            <label class="text-xs font-bold text-gray-400 uppercase tracking-wide">Adresa provozovny</label>
+                            <input type="text" id="customerCardAddress" placeholder="Ulice, č.p., Město" class="w-full bg-white dark:bg-slate-800 border border-gray-300 rounded-lg p-2 text-xs font-semibold outline-none focus:border-[#003366] text-black dark:text-white">
                         </div>
                     </div>
                     
                     <div class="flex gap-2">
-                        <button onclick="saveCustomerCard()" class="flex-1 bg-[#003366] hover:bg-black text-white py-2 rounded-lg font-bold text-xs transition-colors uppercase tracking-wider">
+                        <button onclick="saveCustomerCard()" class="flex-1 bg-[#003366] hover:bg-black text-white py-2 rounded-lg font-bold text-xs transition-colors">
                             Uložit kartu zákazníka
                         </button>
-                        <button id="btnCancelCustomerCard" onclick="clearCustomerCardForm()" class="hidden bg-gray-200 hover:bg-gray-300 text-slate-700 px-3 py-2 rounded-lg font-bold text-xs transition-colors uppercase tracking-wider">
+                        <button id="btnCancelCustomerCard" onclick="clearCustomerCardForm()" class="hidden bg-gray-200 hover:bg-gray-300 text-slate-700 px-3 py-2 rounded-lg font-bold text-xs transition-colors">
                             Zrušit
                         </button>
                     </div>
@@ -461,40 +541,40 @@
         <!-- KARTA ŘIDIČE -->
         <details class="bg-white rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden group" id="details-driver-cards">
             <summary class="flex justify-between items-center p-4 cursor-pointer font-bold text-xs select-none list-none transition-all duration-200 bg-[#003366] text-white group-open:bg-blue-50 group-open:text-[#003366] group-open:border-b group-open:border-blue-100">
-                <span class="flex items-center gap-1.5 uppercase tracking-wider">📇 KARTA ŘIDIČE</span>
+                <span class="flex items-center gap-2 text-sm"><svg class="ico w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z"/></svg> Karta řidiče</span>
                 <span class="transition-transform duration-200 group-open:rotate-180 text-white group-open:text-[#003366]">▼</span>
             </summary>
             <div class="p-4 space-y-4">
                 <div class="bg-gray-50 dark:bg-slate-900 p-3.5 rounded-xl border border-gray-200 dark:border-slate-800 space-y-3">
                     <input type="hidden" id="editDriverCardId" value="">
-                    <h4 id="driverCardFormTitle" class="text-xs font-black text-[#003366] dark:text-blue-300 uppercase tracking-wide">Nový profil řidiče</h4>
+                    <h4 id="driverCardFormTitle" class="text-xs font-bold text-[#003366] dark:text-blue-300">Nový profil řidiče</h4>
                     
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                         <div>
-                            <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Jméno řidiče</label>
-                            <input type="text" id="driverCardName" placeholder="Např. VRABEC" class="w-full bg-white dark:bg-slate-850 border border-gray-300 rounded-lg p-2 text-xs font-bold uppercase outline-none focus:border-[#003366] text-black dark:text-white">
+                            <label class="text-xs font-bold text-gray-400 uppercase tracking-wide">Jméno řidiče</label>
+                            <input type="text" id="driverCardName" placeholder="Např. VRABEC" class="w-full bg-white dark:bg-slate-800 border border-gray-300 rounded-lg p-2 text-xs font-bold uppercase outline-none focus:border-[#003366] text-black dark:text-white">
                         </div>
                         <div>
-                            <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wide">SPZ Vozidla</label>
-                            <input type="text" id="driverCardSPZ" placeholder="Např. 3H1 1234" class="w-full bg-white dark:bg-slate-850 border border-gray-300 rounded-lg p-2 text-xs font-bold uppercase outline-none focus:border-[#003366] text-black dark:text-white">
+                            <label class="text-xs font-bold text-gray-400 uppercase tracking-wide">SPZ Vozidla</label>
+                            <input type="text" id="driverCardSPZ" placeholder="Např. 3H1 1234" class="w-full bg-white dark:bg-slate-800 border border-gray-300 rounded-lg p-2 text-xs font-bold uppercase outline-none focus:border-[#003366] text-black dark:text-white">
                         </div>
                         <div>
-                            <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Dopravce</label>
+                            <label class="text-xs font-bold text-gray-400 uppercase tracking-wide">Dopravce</label>
                             <div class="flex gap-1.5 mt-1">
-                                <select id="driverCardCarrier" class="flex-1 bg-white dark:bg-slate-850 border border-gray-300 rounded-lg p-2 text-xs font-semibold outline-none focus:border-[#003366] text-black dark:text-white">
+                                <select id="driverCardCarrier" class="flex-1 bg-white dark:bg-slate-800 border border-gray-300 rounded-lg p-2 text-xs font-semibold outline-none focus:border-[#003366] text-black dark:text-white">
                                     <option value="" disabled selected>Vyberte dopravce...</option>
                                 </select>
                                 <button onclick="quickAddCarrier()" class="bg-[#003366] text-white font-bold px-2.5 rounded-lg text-xs hover:bg-black transition-colors" title="Přidat nového dopravce">+</button>
                             </div>
                         </div>
                         <div>
-                            <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Telefonní číslo</label>
-                            <input type="tel" id="driverCardPhone" placeholder="Např. +420 777 123 456" class="w-full bg-white dark:bg-slate-850 border border-gray-300 rounded-lg p-2 text-xs font-semibold outline-none focus:border-[#003366] text-black dark:text-white">
+                            <label class="text-xs font-bold text-gray-400 uppercase tracking-wide">Telefonní číslo</label>
+                            <input type="tel" id="driverCardPhone" placeholder="Např. +420 777 123 456" class="w-full bg-white dark:bg-slate-800 border border-gray-300 rounded-lg p-2 text-xs font-semibold outline-none focus:border-[#003366] text-black dark:text-white">
                         </div>
                         <div class="sm:col-span-2">
-                            <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Velikost vozidla</label>
+                            <label class="text-xs font-bold text-gray-400 uppercase tracking-wide">Velikost vozidla</label>
                             <div class="flex gap-1.5 mt-1">
-                                <select id="driverCardSize" class="flex-1 bg-white dark:bg-slate-850 border border-gray-300 rounded-lg p-2 text-xs font-semibold outline-none focus:border-[#003366] text-black dark:text-white">
+                                <select id="driverCardSize" class="flex-1 bg-white dark:bg-slate-800 border border-gray-300 rounded-lg p-2 text-xs font-semibold outline-none focus:border-[#003366] text-black dark:text-white">
                                     <option value="" disabled selected>Vyberte velikost vozidla...</option>
                                 </select>
                                 <button onclick="quickAddVehicleSize()" class="bg-[#003366] text-white font-bold px-2.5 rounded-lg text-xs hover:bg-black transition-colors" title="Přidat velikost vozidla">+</button>
@@ -503,27 +583,27 @@
                     </div>
                     
                     <div class="flex gap-2">
-                        <button onclick="saveDriverCard()" class="flex-1 bg-[#003366] hover:bg-black text-white py-2 rounded-lg font-bold text-xs transition-colors uppercase tracking-wider">
+                        <button onclick="saveDriverCard()" class="flex-1 bg-[#003366] hover:bg-black text-white py-2 rounded-lg font-bold text-xs transition-colors">
                             Uložit kartu řidiče
                         </button>
-                        <button id="btnCancelDriverCard" onclick="clearDriverCardForm()" class="hidden bg-gray-200 hover:bg-gray-300 text-slate-700 px-3 py-2 rounded-lg font-bold text-xs transition-colors uppercase tracking-wider">
+                        <button id="btnCancelDriverCard" onclick="clearDriverCardForm()" class="hidden bg-gray-200 hover:bg-gray-300 text-slate-700 px-3 py-2 rounded-lg font-bold text-xs transition-colors">
                             Zrušit
                         </button>
                     </div>
                 </div>
                 <div id="settingsDriverCardsList" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
-                <p class="text-[10px] text-gray-400 italic px-1">Evidence řidičů je od této verze součástí Karty řidiče výše – samostatný seznam jmen (bez dalších údajů) byl zrušen, ať databázi řidičů nemáš dvakrát.</p>
+                <p class="text-xs text-gray-400 italic px-1">Evidence řidičů je od této verze součástí Karty řidiče výše – samostatný seznam jmen (bez dalších údajů) byl zrušen, ať databázi řidičů nemáš dvakrát.</p>
             </div>
         </details>
 
         <!-- PÍSKOVIŠTĚ – SMĚRY -->
         <details class="bg-white rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden group">
             <summary class="flex justify-between items-center p-4 cursor-pointer font-bold text-xs select-none list-none transition-all duration-200 bg-[#003366] text-white group-open:bg-blue-50 group-open:text-[#003366] group-open:border-b group-open:border-blue-100">
-                <span class="uppercase tracking-wider">🧭 PÍSKOVIŠTĚ – SMĚRY</span>
+                <span class="flex items-center gap-2 text-sm"><svg class="ico w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z"/></svg> Pískoviště – směry</span>
                 <span class="transition-transform duration-200 group-open:rotate-180 text-white group-open:text-[#003366]">▼</span>
             </summary>
             <div class="p-4 space-y-3">
-                <p class="text-[10px] text-gray-400 italic">Číslo u směru je orientační počet vozidel, podle kterého se v Pískovišti barví štítek obsazenosti (červená/oranžová/zelená).</p>
+                <p class="text-xs text-gray-400 italic">Číslo u směru je orientační počet vozidel, podle kterého se v Pískovišti barví štítek obsazenosti (červená/oranžová/zelená).</p>
                 <div class="flex gap-2">
                     <input type="text" id="newSandboxDirName" placeholder="Název směru" class="flex-1 bg-gray-50 border border-gray-300 rounded-lg p-2 text-xs font-bold uppercase outline-none focus:border-[#003366] text-black dark:text-white">
                     <input type="number" id="newSandboxDirExpected" placeholder="Poč. vozidel" min="1" value="1" class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2 text-xs font-bold outline-none focus:border-[#003366] text-black dark:text-white">
@@ -536,151 +616,178 @@
         <!-- VOZIDLA GEIS (vozový park) -->
         <details class="bg-white rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden group">
             <summary class="flex justify-between items-center p-4 cursor-pointer font-bold text-xs select-none list-none transition-all duration-200 bg-[#003366] text-white group-open:bg-blue-50 group-open:text-[#003366] group-open:border-b group-open:border-blue-100">
-                <span class="uppercase tracking-wider">📦 VOZIDLA GEIS</span>
+                <span class="flex items-center gap-2 text-sm"><svg class="ico w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/></svg> Vozidla GEIS</span>
                 <span class="transition-transform duration-200 group-open:rotate-180 text-white group-open:text-[#003366]">▼</span>
             </summary>
             <div class="p-4 space-y-4">
                 <!-- Tahače návěsů -->
                 <div>
-                    <h4 class="text-[11px] font-black text-[#003366] dark:text-blue-300 uppercase tracking-wide mb-2 flex items-center gap-1.5">🚛 Tahače návěsů <span class="text-gray-400 font-bold normal-case">(6 ks)</span></h4>
+                    <h4 class="text-xs font-bold text-[#003366] dark:text-blue-300 mb-2 flex items-center gap-1.5"><svg class="ico w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/></svg> Tahače návěsů <span class="text-gray-400 font-bold normal-case">(6 ks)</span></h4>
                     <div class="space-y-1.5">
                         <div class="flex items-center justify-between gap-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg px-3 py-2">
-                            <div class="min-w-0"><div class="text-[11px] font-black text-slate-800 dark:text-slate-100">5005 · <span class="text-gray-500 dark:text-gray-400 font-bold">MAN TGX 18.430</span></div><div class="text-[10px] text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">8P7 9323</span></div></div>
-                            <div class="text-right shrink-0"><div class="text-[8px] font-bold text-gray-400 uppercase">STK</div><div class="text-[11px] font-black text-slate-700 dark:text-slate-200">17.06.2027</div></div>
+                            <div class="min-w-0"><div class="text-xs font-bold text-slate-800 dark:text-slate-100">5005 · <span class="text-gray-500 dark:text-gray-400 font-bold">MAN TGX 18.430</span></div><div class="text-xs text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">8P7 9323</span></div></div>
+                            <div class="text-right shrink-0"><div class="text-xs font-bold text-gray-400 uppercase">STK</div><div class="text-xs font-bold text-slate-700 dark:text-slate-200">17.06.2027</div></div>
                         </div>
                         <div class="flex items-center justify-between gap-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg px-3 py-2">
-                            <div class="min-w-0"><div class="text-[11px] font-black text-slate-800 dark:text-slate-100">5001 · <span class="text-gray-500 dark:text-gray-400 font-bold">MAN TGX 18.430</span></div><div class="text-[10px] text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">8P4 8917</span></div></div>
-                            <div class="text-right shrink-0"><div class="text-[8px] font-bold text-gray-400 uppercase">STK</div><div class="text-[11px] font-black text-slate-700 dark:text-slate-200">31.07.2026</div></div>
+                            <div class="min-w-0"><div class="text-xs font-bold text-slate-800 dark:text-slate-100">5001 · <span class="text-gray-500 dark:text-gray-400 font-bold">MAN TGX 18.430</span></div><div class="text-xs text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">8P4 8917</span></div></div>
+                            <div class="text-right shrink-0"><div class="text-xs font-bold text-gray-400 uppercase">STK</div><div class="text-xs font-bold text-slate-700 dark:text-slate-200">31.07.2026</div></div>
                         </div>
                         <div class="flex items-center justify-between gap-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg px-3 py-2">
-                            <div class="min-w-0"><div class="text-[11px] font-black text-slate-800 dark:text-slate-100">5002 · <span class="text-gray-500 dark:text-gray-400 font-bold">MAN TGX 18.430</span></div><div class="text-[10px] text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">8P4 8887</span></div></div>
-                            <div class="text-right shrink-0"><div class="text-[8px] font-bold text-gray-400 uppercase">STK</div><div class="text-[11px] font-black text-slate-700 dark:text-slate-200">22.07.2026</div></div>
+                            <div class="min-w-0"><div class="text-xs font-bold text-slate-800 dark:text-slate-100">5002 · <span class="text-gray-500 dark:text-gray-400 font-bold">MAN TGX 18.430</span></div><div class="text-xs text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">8P4 8887</span></div></div>
+                            <div class="text-right shrink-0"><div class="text-xs font-bold text-gray-400 uppercase">STK</div><div class="text-xs font-bold text-slate-700 dark:text-slate-200">22.07.2026</div></div>
                         </div>
                         <div class="flex items-center justify-between gap-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg px-3 py-2">
-                            <div class="min-w-0"><div class="text-[11px] font-black text-slate-800 dark:text-slate-100">5004 · <span class="text-gray-500 dark:text-gray-400 font-bold">MAN TGX 18.430</span></div><div class="text-[10px] text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">8P2 7096</span></div></div>
-                            <div class="text-right shrink-0"><div class="text-[8px] font-bold text-gray-400 uppercase">STK</div><div class="text-[11px] font-black text-slate-700 dark:text-slate-200">01.08.2026</div></div>
+                            <div class="min-w-0"><div class="text-xs font-bold text-slate-800 dark:text-slate-100">5004 · <span class="text-gray-500 dark:text-gray-400 font-bold">MAN TGX 18.430</span></div><div class="text-xs text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">8P2 7096</span></div></div>
+                            <div class="text-right shrink-0"><div class="text-xs font-bold text-gray-400 uppercase">STK</div><div class="text-xs font-bold text-slate-700 dark:text-slate-200">01.08.2026</div></div>
                         </div>
                         <div class="flex items-center justify-between gap-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg px-3 py-2">
-                            <div class="min-w-0"><div class="text-[11px] font-black text-slate-800 dark:text-slate-100">5003 · <span class="text-gray-500 dark:text-gray-400 font-bold">MAN TGX 18.430</span></div><div class="text-[10px] text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">8P2 7095</span></div></div>
-                            <div class="text-right shrink-0"><div class="text-[8px] font-bold text-gray-400 uppercase">STK</div><div class="text-[11px] font-black text-slate-700 dark:text-slate-200">04.08.2026</div></div>
+                            <div class="min-w-0"><div class="text-xs font-bold text-slate-800 dark:text-slate-100">5003 · <span class="text-gray-500 dark:text-gray-400 font-bold">MAN TGX 18.430</span></div><div class="text-xs text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">8P2 7095</span></div></div>
+                            <div class="text-right shrink-0"><div class="text-xs font-bold text-gray-400 uppercase">STK</div><div class="text-xs font-bold text-slate-700 dark:text-slate-200">04.08.2026</div></div>
                         </div>
                         <div class="flex items-center justify-between gap-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg px-3 py-2">
-                            <div class="min-w-0"><div class="text-[11px] font-black text-slate-800 dark:text-slate-100">Tahač · <span class="text-gray-500 dark:text-gray-400 font-bold">MB ACTROS 1841</span></div><div class="text-[10px] text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">6P1 5438</span></div></div>
-                            <div class="text-right shrink-0"><div class="text-[8px] font-bold text-gray-400 uppercase">STK</div><div class="text-[11px] font-black text-slate-700 dark:text-slate-200">21.08.2026</div></div>
+                            <div class="min-w-0"><div class="text-xs font-bold text-slate-800 dark:text-slate-100">Tahač · <span class="text-gray-500 dark:text-gray-400 font-bold">MB ACTROS 1841</span></div><div class="text-xs text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">6P1 5438</span></div></div>
+                            <div class="text-right shrink-0"><div class="text-xs font-bold text-gray-400 uppercase">STK</div><div class="text-xs font-bold text-slate-700 dark:text-slate-200">21.08.2026</div></div>
                         </div>
                     </div>
                 </div>
                 <!-- Přípojná vozidla – návěsy -->
                 <div>
-                    <h4 class="text-[11px] font-black text-[#003366] dark:text-blue-300 uppercase tracking-wide mb-2 flex items-center gap-1.5">🚚 Přípojná vozidla – návěsy <span class="text-gray-400 font-bold normal-case">(15 ks)</span></h4>
+                    <h4 class="text-xs font-bold text-[#003366] dark:text-blue-300 mb-2 flex items-center gap-1.5"><svg class="ico w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/></svg> Přípojná vozidla – návěsy <span class="text-gray-400 font-bold normal-case">(15 ks)</span></h4>
                     <div class="space-y-1.5">
                         <div class="flex items-center justify-between gap-2 bg-gray-50 dark:bg-slate-900 border border-dashed border-gray-300 dark:border-slate-700 rounded-lg px-3 py-2">
-                            <div class="min-w-0"><div class="text-[11px] font-black text-slate-800 dark:text-slate-100">č. 1 · <span class="text-gray-400 font-bold italic">nezařazeno</span></div></div>
-                            <div class="text-right shrink-0"><div class="text-[8px] font-bold text-gray-400 uppercase">STK</div><div class="text-[11px] font-black text-gray-400">–</div></div>
+                            <div class="min-w-0"><div class="text-xs font-bold text-slate-800 dark:text-slate-100">č. 1 · <span class="text-gray-400 font-bold italic">nezařazeno</span></div></div>
+                            <div class="text-right shrink-0"><div class="text-xs font-bold text-gray-400 uppercase">STK</div><div class="text-xs font-bold text-gray-400">–</div></div>
                         </div>
                         <div class="flex items-center justify-between gap-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg px-3 py-2">
-                            <div class="min-w-0"><div class="text-[11px] font-black text-slate-800 dark:text-slate-100">č. 2 · <span class="text-gray-500 dark:text-gray-400 font-bold">KRONE</span></div><div class="text-[10px] text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">9AJ 2072</span></div></div>
-                            <div class="text-right shrink-0"><div class="text-[8px] font-bold text-gray-400 uppercase">STK</div><div class="text-[11px] font-black text-slate-700 dark:text-slate-200">26.06.2027</div></div>
+                            <div class="min-w-0"><div class="text-xs font-bold text-slate-800 dark:text-slate-100">č. 2 · <span class="text-gray-500 dark:text-gray-400 font-bold">KRONE</span></div><div class="text-xs text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">9AJ 2072</span></div></div>
+                            <div class="text-right shrink-0"><div class="text-xs font-bold text-gray-400 uppercase">STK</div><div class="text-xs font-bold text-slate-700 dark:text-slate-200">26.06.2027</div></div>
                         </div>
                         <div class="flex items-center justify-between gap-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg px-3 py-2">
-                            <div class="min-w-0"><div class="text-[11px] font-black text-slate-800 dark:text-slate-100">č. 3 · <span class="text-gray-500 dark:text-gray-400 font-bold">KRONE</span></div><div class="text-[10px] text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">9AJ 2073</span></div></div>
-                            <div class="text-right shrink-0"><div class="text-[8px] font-bold text-gray-400 uppercase">STK</div><div class="text-[11px] font-black text-slate-700 dark:text-slate-200">30.06.2027</div></div>
+                            <div class="min-w-0"><div class="text-xs font-bold text-slate-800 dark:text-slate-100">č. 3 · <span class="text-gray-500 dark:text-gray-400 font-bold">KRONE</span></div><div class="text-xs text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">9AJ 2073</span></div></div>
+                            <div class="text-right shrink-0"><div class="text-xs font-bold text-gray-400 uppercase">STK</div><div class="text-xs font-bold text-slate-700 dark:text-slate-200">30.06.2027</div></div>
                         </div>
                         <div class="flex items-center justify-between gap-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg px-3 py-2">
-                            <div class="min-w-0"><div class="text-[11px] font-black text-slate-800 dark:text-slate-100">č. 4 · <span class="text-gray-500 dark:text-gray-400 font-bold">KRONE</span></div><div class="text-[10px] text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">9AJ 2074</span></div></div>
-                            <div class="text-right shrink-0"><div class="text-[8px] font-bold text-gray-400 uppercase">STK</div><div class="text-[11px] font-black text-slate-700 dark:text-slate-200">01.07.2027</div></div>
+                            <div class="min-w-0"><div class="text-xs font-bold text-slate-800 dark:text-slate-100">č. 4 · <span class="text-gray-500 dark:text-gray-400 font-bold">KRONE</span></div><div class="text-xs text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">9AJ 2074</span></div></div>
+                            <div class="text-right shrink-0"><div class="text-xs font-bold text-gray-400 uppercase">STK</div><div class="text-xs font-bold text-slate-700 dark:text-slate-200">01.07.2027</div></div>
                         </div>
                         <div class="flex items-center justify-between gap-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg px-3 py-2">
-                            <div class="min-w-0"><div class="text-[11px] font-black text-slate-800 dark:text-slate-100">č. 5 · <span class="text-gray-500 dark:text-gray-400 font-bold">KRONE</span></div><div class="text-[10px] text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">9AJ 2075</span></div></div>
-                            <div class="text-right shrink-0"><div class="text-[8px] font-bold text-gray-400 uppercase">STK</div><div class="text-[11px] font-black text-slate-700 dark:text-slate-200">24.06.2027</div></div>
+                            <div class="min-w-0"><div class="text-xs font-bold text-slate-800 dark:text-slate-100">č. 5 · <span class="text-gray-500 dark:text-gray-400 font-bold">KRONE</span></div><div class="text-xs text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">9AJ 2075</span></div></div>
+                            <div class="text-right shrink-0"><div class="text-xs font-bold text-gray-400 uppercase">STK</div><div class="text-xs font-bold text-slate-700 dark:text-slate-200">24.06.2027</div></div>
                         </div>
                         <div class="flex items-center justify-between gap-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg px-3 py-2">
-                            <div class="min-w-0"><div class="text-[11px] font-black text-slate-800 dark:text-slate-100">č. 6 · <span class="text-gray-500 dark:text-gray-400 font-bold">KRONE (skříň-rolo)</span></div><div class="text-[10px] text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">9AJ 2656</span></div></div>
-                            <div class="text-right shrink-0"><div class="text-[8px] font-bold text-gray-400 uppercase">STK</div><div class="text-[11px] font-black text-slate-700 dark:text-slate-200">09.10.2026</div></div>
+                            <div class="min-w-0"><div class="text-xs font-bold text-slate-800 dark:text-slate-100">č. 6 · <span class="text-gray-500 dark:text-gray-400 font-bold">KRONE (skříň-rolo)</span></div><div class="text-xs text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">9AJ 2656</span></div></div>
+                            <div class="text-right shrink-0"><div class="text-xs font-bold text-gray-400 uppercase">STK</div><div class="text-xs font-bold text-slate-700 dark:text-slate-200">09.10.2026</div></div>
                         </div>
                         <div class="flex items-center justify-between gap-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg px-3 py-2">
-                            <div class="min-w-0"><div class="text-[11px] font-black text-slate-800 dark:text-slate-100">č. 7 · <span class="text-gray-500 dark:text-gray-400 font-bold">KRONE</span></div><div class="text-[10px] text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">6P7 6552</span></div></div>
-                            <div class="text-right shrink-0"><div class="text-[8px] font-bold text-gray-400 uppercase">STK</div><div class="text-[11px] font-black text-slate-700 dark:text-slate-200">01.07.2027</div></div>
+                            <div class="min-w-0"><div class="text-xs font-bold text-slate-800 dark:text-slate-100">č. 7 · <span class="text-gray-500 dark:text-gray-400 font-bold">KRONE</span></div><div class="text-xs text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">6P7 6552</span></div></div>
+                            <div class="text-right shrink-0"><div class="text-xs font-bold text-gray-400 uppercase">STK</div><div class="text-xs font-bold text-slate-700 dark:text-slate-200">01.07.2027</div></div>
                         </div>
                         <div class="flex items-center justify-between gap-2 bg-gray-50 dark:bg-slate-900 border border-dashed border-gray-300 dark:border-slate-700 rounded-lg px-3 py-2">
-                            <div class="min-w-0"><div class="text-[11px] font-black text-slate-800 dark:text-slate-100">č. 8 · <span class="text-gray-400 font-bold italic">nezařazeno</span></div></div>
-                            <div class="text-right shrink-0"><div class="text-[8px] font-bold text-gray-400 uppercase">STK</div><div class="text-[11px] font-black text-gray-400">–</div></div>
+                            <div class="min-w-0"><div class="text-xs font-bold text-slate-800 dark:text-slate-100">č. 8 · <span class="text-gray-400 font-bold italic">nezařazeno</span></div></div>
+                            <div class="text-right shrink-0"><div class="text-xs font-bold text-gray-400 uppercase">STK</div><div class="text-xs font-bold text-gray-400">–</div></div>
                         </div>
                         <div class="flex items-center justify-between gap-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg px-3 py-2">
-                            <div class="min-w-0"><div class="text-[11px] font-black text-slate-800 dark:text-slate-100">č. 9 · <span class="text-gray-500 dark:text-gray-400 font-bold">KRONE</span></div><div class="text-[10px] text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">9AE 5046</span></div></div>
-                            <div class="text-right shrink-0"><div class="text-[8px] font-bold text-gray-400 uppercase">STK</div><div class="text-[11px] font-black text-slate-700 dark:text-slate-200">01.07.2027</div></div>
+                            <div class="min-w-0"><div class="text-xs font-bold text-slate-800 dark:text-slate-100">č. 9 · <span class="text-gray-500 dark:text-gray-400 font-bold">KRONE</span></div><div class="text-xs text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">9AE 5046</span></div></div>
+                            <div class="text-right shrink-0"><div class="text-xs font-bold text-gray-400 uppercase">STK</div><div class="text-xs font-bold text-slate-700 dark:text-slate-200">01.07.2027</div></div>
                         </div>
                         <div class="flex items-center justify-between gap-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg px-3 py-2">
-                            <div class="min-w-0"><div class="text-[11px] font-black text-slate-800 dark:text-slate-100">č. 10 · <span class="text-gray-500 dark:text-gray-400 font-bold">SCHMITZ</span></div><div class="text-[10px] text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">7T2 3872</span></div></div>
-                            <div class="text-right shrink-0"><div class="text-[8px] font-bold text-gray-400 uppercase">STK</div><div class="text-[11px] font-black text-slate-700 dark:text-slate-200">27.08.2026</div></div>
+                            <div class="min-w-0"><div class="text-xs font-bold text-slate-800 dark:text-slate-100">č. 10 · <span class="text-gray-500 dark:text-gray-400 font-bold">SCHMITZ</span></div><div class="text-xs text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">7T2 3872</span></div></div>
+                            <div class="text-right shrink-0"><div class="text-xs font-bold text-gray-400 uppercase">STK</div><div class="text-xs font-bold text-slate-700 dark:text-slate-200">27.08.2026</div></div>
                         </div>
                         <div class="flex items-center justify-between gap-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg px-3 py-2">
-                            <div class="min-w-0"><div class="text-[11px] font-black text-slate-800 dark:text-slate-100">č. 11 · <span class="text-gray-500 dark:text-gray-400 font-bold">SCHMITZ</span></div><div class="text-[10px] text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">7U4 0578</span></div></div>
-                            <div class="text-right shrink-0"><div class="text-[8px] font-bold text-gray-400 uppercase">STK</div><div class="text-[11px] font-black text-slate-700 dark:text-slate-200">11.03.2027</div></div>
+                            <div class="min-w-0"><div class="text-xs font-bold text-slate-800 dark:text-slate-100">č. 11 · <span class="text-gray-500 dark:text-gray-400 font-bold">SCHMITZ</span></div><div class="text-xs text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">7U4 0578</span></div></div>
+                            <div class="text-right shrink-0"><div class="text-xs font-bold text-gray-400 uppercase">STK</div><div class="text-xs font-bold text-slate-700 dark:text-slate-200">11.03.2027</div></div>
                         </div>
                         <div class="flex items-center justify-between gap-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg px-3 py-2">
-                            <div class="min-w-0"><div class="text-[11px] font-black text-slate-800 dark:text-slate-100">č. 12 · <span class="text-gray-500 dark:text-gray-400 font-bold">SCHMITZ</span></div><div class="text-[10px] text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">9T6 4854</span></div></div>
-                            <div class="text-right shrink-0"><div class="text-[8px] font-bold text-gray-400 uppercase">STK</div><div class="text-[11px] font-black text-slate-700 dark:text-slate-200">04.02.2027</div></div>
+                            <div class="min-w-0"><div class="text-xs font-bold text-slate-800 dark:text-slate-100">č. 12 · <span class="text-gray-500 dark:text-gray-400 font-bold">SCHMITZ</span></div><div class="text-xs text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">9T6 4854</span></div></div>
+                            <div class="text-right shrink-0"><div class="text-xs font-bold text-gray-400 uppercase">STK</div><div class="text-xs font-bold text-slate-700 dark:text-slate-200">04.02.2027</div></div>
                         </div>
                         <div class="flex items-center justify-between gap-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg px-3 py-2">
-                            <div class="min-w-0"><div class="text-[11px] font-black text-slate-800 dark:text-slate-100">č. 13 · <span class="text-gray-500 dark:text-gray-400 font-bold">SCHMITZ</span></div><div class="text-[10px] text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">7U4 0593</span></div></div>
-                            <div class="text-right shrink-0"><div class="text-[8px] font-bold text-gray-400 uppercase">STK</div><div class="text-[11px] font-black text-slate-700 dark:text-slate-200">24.04.2027</div></div>
+                            <div class="min-w-0"><div class="text-xs font-bold text-slate-800 dark:text-slate-100">č. 13 · <span class="text-gray-500 dark:text-gray-400 font-bold">SCHMITZ</span></div><div class="text-xs text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">7U4 0593</span></div></div>
+                            <div class="text-right shrink-0"><div class="text-xs font-bold text-gray-400 uppercase">STK</div><div class="text-xs font-bold text-slate-700 dark:text-slate-200">24.04.2027</div></div>
                         </div>
                         <div class="flex items-center justify-between gap-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg px-3 py-2">
-                            <div class="min-w-0"><div class="text-[11px] font-black text-slate-800 dark:text-slate-100">č. 14 · <span class="text-gray-500 dark:text-gray-400 font-bold">KRONE</span></div><div class="text-[10px] text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">9P8 4610</span></div></div>
-                            <div class="text-right shrink-0"><div class="text-[8px] font-bold text-gray-400 uppercase">STK</div><div class="text-[11px] font-black text-slate-700 dark:text-slate-200">21.04.2027</div></div>
+                            <div class="min-w-0"><div class="text-xs font-bold text-slate-800 dark:text-slate-100">č. 14 · <span class="text-gray-500 dark:text-gray-400 font-bold">KRONE</span></div><div class="text-xs text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">9P8 4610</span></div></div>
+                            <div class="text-right shrink-0"><div class="text-xs font-bold text-gray-400 uppercase">STK</div><div class="text-xs font-bold text-slate-700 dark:text-slate-200">21.04.2027</div></div>
                         </div>
                         <div class="flex items-center justify-between gap-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg px-3 py-2">
-                            <div class="min-w-0"><div class="text-[11px] font-black text-slate-800 dark:text-slate-100">č. 15 · <span class="text-gray-500 dark:text-gray-400 font-bold">KRONE</span></div><div class="text-[10px] text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">9P8 4635</span></div></div>
-                            <div class="text-right shrink-0"><div class="text-[8px] font-bold text-gray-400 uppercase">STK</div><div class="text-[11px] font-black text-slate-700 dark:text-slate-200">18.05.2027</div></div>
+                            <div class="min-w-0"><div class="text-xs font-bold text-slate-800 dark:text-slate-100">č. 15 · <span class="text-gray-500 dark:text-gray-400 font-bold">KRONE</span></div><div class="text-xs text-gray-500 dark:text-gray-400">RZ: <span class="font-bold text-slate-700 dark:text-slate-200">9P8 4635</span></div></div>
+                            <div class="text-right shrink-0"><div class="text-xs font-bold text-gray-400 uppercase">STK</div><div class="text-xs font-bold text-slate-700 dark:text-slate-200">18.05.2027</div></div>
                         </div>
                     </div>
                 </div>
-                <p class="text-[10px] text-gray-400 italic">Přehled vozového parku GEIS CZ – pouze k náhledu. Stav dle podkladu 07/2026.</p>
+                <p class="text-xs text-gray-400 italic">Přehled vozového parku GEIS CZ – pouze k náhledu. Stav dle podkladu 07/2026.</p>
             </div>
         </details>
 
+        <!-- v4.2: Novinky / Changelog -->
+        <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-200 flex items-center justify-between gap-3">
+            <div class="min-w-0">
+                <h2 class="text-sm font-bold text-[#003366]">Novinky v aplikaci</h2>
+                <p class="text-xs text-gray-500">Verze <span id="appVersionLabel">–</span> · přehled změn</p>
+            </div>
+            <button onclick="openChangelog()" class="shrink-0 bg-[#003366] hover:bg-black text-white text-sm font-bold py-2 px-4 rounded-lg shadow-sm">Zobrazit</button>
+        </div>
+
         <!-- Zálohování a přenos -->
         <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-200 space-y-3">
-            <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Zálohování a Přenos Dat</h2>
+            <h2 class="text-xs font-bold text-gray-400">Zálohování a Přenos Dat</h2>
             <p class="text-xs text-gray-500">Zálohujte si data, abyste o ně nepřišli při promazání prohlížeče nebo pro přenos do jiného telefonu.</p>
-            <p id="lastBackupInfo" class="text-[11px] font-bold text-gray-400">Poslední záloha: nikdy</p>
+            <p id="lastBackupInfo" class="text-xs font-bold text-gray-400">Poslední záloha: nikdy</p>
             <div class="grid grid-cols-2 gap-2">
                 <button onclick="exportData()" class="bg-[#003366] hover:bg-black text-white text-xs font-bold py-2.5 rounded-lg transition-colors shadow-sm">
-                    📥 Exportovat data
+                    <svg class="ico w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg> Exportovat data
                 </button>
                 <label class="bg-gray-100 hover:bg-gray-200 text-slate-700 text-xs font-bold py-2.5 rounded-lg transition-colors shadow-sm text-center cursor-pointer block border border-gray-300">
-                    📤 Importovat data
+                    <svg class="ico w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg> Importovat data
                     <input type="file" id="importFile" accept=".json" onchange="importData(event)" class="hidden">
                 </label>
             </div>
         </div>
     </main>
 
+    <!-- v4.2: CHANGELOG – okno s novinkami (zobrazí se 1× denně po dobu 7 dní od první návštěvy nové verze) -->
+    <div id="changelogModal" class="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4" onclick="if(event.target===this)closeChangelog()" role="dialog" aria-modal="true" aria-labelledby="changelogTitle">
+        <div class="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-xl flex flex-col max-h-[85vh] border border-gray-200">
+            <div class="bg-[#003366] p-4 text-white flex justify-between items-start border-b-4 border-[#002244] shrink-0">
+                <div>
+                    <h2 id="changelogTitle" class="text-lg font-bold leading-tight text-white">Co je nového</h2>
+                    <p id="changelogSubtitle" class="text-sm text-slate-200 mt-0.5">---</p>
+                </div>
+                <button onclick="closeChangelog()" aria-label="Zavřít" class="bg-[#002244] hover:bg-[#001530] text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">✕</button>
+            </div>
+            <div id="changelogBody" class="p-4 space-y-5 overflow-y-auto flex-1 text-sm text-slate-800"></div>
+            <div class="p-4 border-t border-gray-200 shrink-0 space-y-2">
+                <button onclick="closeChangelog()" class="w-full bg-[#003366] hover:bg-[#002244] text-white font-bold py-3 rounded-lg text-sm shadow-sm active:scale-[0.99]">Rozumím</button>
+                <p id="changelogFooter" class="text-xs text-gray-500 text-center"></p>
+            </div>
+        </div>
+    </div>
+
     <!-- Menu se spodními bezpečnými zónami iOS -->
     <nav class="fixed bottom-0 w-full bg-white border-t border-gray-200 p-3 flex justify-around shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe z-10">
         <button id="nav-counter" onclick="switchTab('counter', event)" class="text-[#003366] flex flex-col items-center transition-colors">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
-            <span class="text-[10px] mt-1 font-bold tracking-wide uppercase">Mřížka</span>
+            <span class="text-xs mt-1 font-bold">Mřížka</span>
         </button>
         <button id="nav-drivers" onclick="switchTab('drivers', event)" class="text-gray-400 flex flex-col items-center transition-colors">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a3 3 0 10-2.83-4"></path></svg>
-            <span class="text-[10px] mt-1 font-bold tracking-wide uppercase">Řidiči</span>
+            <span class="text-xs mt-1 font-bold">Řidiči</span>
         </button>
         <button id="nav-trailers" onclick="switchTab('trailers', event)" class="text-gray-400 flex flex-col items-center transition-colors">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V14a1 1 0 01-1 1h-1m-5.333-3H15"></path></svg>
-            <span class="text-[10px] mt-1 font-bold tracking-wide uppercase">Návěsy</span>
+            <span class="text-xs mt-1 font-bold">Návěsy</span>
         </button>
         <button id="nav-sandbox" onclick="switchTab('sandbox', event)" class="text-gray-400 flex flex-col items-center transition-colors">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-            <span class="text-[10px] mt-1 font-bold tracking-wide uppercase">Pískoviště</span>
+            <span class="text-xs mt-1 font-bold">Pískoviště</span>
         </button>
         <button id="nav-settings" onclick="switchTab('settings', event)" class="text-gray-400 flex flex-col items-center transition-colors">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065"></path>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
             </svg>
-            <span class="text-[10px] mt-1 font-bold tracking-wide uppercase">Nastavení</span>
+            <span class="text-xs mt-1 font-bold">Nastavení</span>
         </button>
     </nav>
 
@@ -696,6 +803,54 @@
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
+
+        // v4.2: OFFLINE REŽIM – data z Firestore se drží i v telefonu (IndexedDB).
+        // Bez signálu appka ukáže poslední známá data a zápisy odešle po připojení.
+        // Musí se zavolat hned po vytvoření db, před prvním čtením.
+        try {
+            db.enablePersistence({ synchronizeTabs: true }).catch(err => {
+                console.warn('Offline perzistence není dostupná:', err && err.code);
+            });
+        } catch (e) { console.warn('Offline perzistence:', e); }
+
+        // ====================================================================
+        //  v4.2: POMOCNÉ FUNKCE – ikony a bezpečné vkládání textu
+        // ====================================================================
+        // Jednotné ikony (Heroicons, outline) místo emoji.
+        const ICONS = {
+            building: 'M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21',
+            phone: 'M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z',
+            user: 'M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z',
+            idcard: 'M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z',
+            truck: 'M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12',
+            map: 'M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z',
+            cube: 'M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9',
+            chat: 'M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z',
+            mail: 'M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75',
+            pencil: 'M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125',
+            plus: 'M12 4.5v15m7.5-7.5h-15',
+            check: 'M4.5 12.75l6 6 9-13.5',
+            warning: 'M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z',
+            download: 'M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3',
+            upload: 'M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5',
+            inbox: 'M2.25 13.5h3.86a2.25 2.25 0 012.012 1.244l.256.512a2.25 2.25 0 002.013 1.244h3.218a2.25 2.25 0 002.013-1.244l.256-.512a2.25 2.25 0 012.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 00-2.15-1.588H6.911a2.25 2.25 0 00-2.15 1.588L2.35 13.177a2.25 2.25 0 00-.1.661z',
+            search: 'M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z',
+            sparkles: 'M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z',
+            arrow: 'M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3'
+        };
+        function ic(name, cls) {
+            const d = ICONS[name];
+            if (!d) return '';
+            return '<svg class="ico ' + (cls || 'w-4 h-4') + '" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="' + d + '"/></svg>';
+        }
+        window.ic = ic; // používá i pending-imports.js
+
+        // Bezpečné předání textu jako argumentu do onclick="...":
+        // JSON.stringify udělá platný JS řetězec (apostrof v L'ORÉAL nevadí)
+        // a escDC ho ošetří pro vložení do HTML atributu.
+        function jsArg(v) {
+            return escDC(JSON.stringify(String(v == null ? '' : v)));
+        }
 
         // ====================================================================
         //  VÝCHOZÍ ČÍSELNÍKY (verze 4.1 – 22.7.2026)
@@ -967,10 +1122,22 @@
             }
         }
 
-        if (localStorage.getItem('darkMode') === 'true') {
-            document.body.classList.add('dark', 'dark-mode');
-            updateThemeIcon(true);
+        // v4.2: Když si uživatel režim ještě nikdy nepřepnul, řídíme se nastavením
+        // telefonu/počítače (systémový tmavý režim). Po ručním přepnutí platí jeho volba.
+        function isDarkPreferred() {
+            const saved = localStorage.getItem('darkMode');
+            if (saved === 'true') return true;
+            if (saved === 'false') return false;
+            return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
         }
+
+        function applyThemeFromPreference() {
+            const dark = isDarkPreferred();
+            document.body.classList.toggle('dark', dark);
+            document.body.classList.toggle('dark-mode', dark);
+            updateThemeIcon(dark);
+        }
+        applyThemeFromPreference();
 
         const getTodayStr = () => {
             const d = new Date();
@@ -988,8 +1155,28 @@
             return d.toLocaleDateString('cs-CZ', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         }
 
+        // v4.2: krátký nadpis do hlavičky – "Po 5. 10."
+        function formatDateShortCz(dateStr) {
+            const parts = dateStr.split('-');
+            const d = new Date(parts[0], parts[1] - 1, parts[2]);
+            const days = ['Ne', 'Po', 'Út', 'St', 'Čt', 'Pá', 'So'];
+            return `${days[d.getDay()]} ${d.getDate()}. ${d.getMonth() + 1}.`;
+        }
+
         function updateDateUI() {
             document.getElementById('currentDateDisplay').textContent = formatDateToCzech(activeDate);
+            const titleEl = document.getElementById('headerDateTitle');
+            if (titleEl) titleEl.textContent = formatDateShortCz(activeDate);
+            // Štítek "Dnes" (zelený) / "Jiný den" (oranžový) – ať je hned vidět,
+            // že zapisuješ do jiného dne než dnešního.
+            const badge = document.getElementById('headerDayBadge');
+            if (badge) {
+                const isToday = activeDate === getTodayStr();
+                badge.textContent = isToday ? 'Dnes' : 'Jiný den';
+                badge.className = 'text-xs font-bold px-2 py-0.5 rounded-full border ' + (isToday
+                    ? 'bg-green-50 text-green-800 border-green-300'
+                    : 'bg-orange-100 text-orange-800 border-orange-300');
+            }
             const picker = document.getElementById('appDatePicker');
             if (picker) {
                 picker.value = activeDate;
@@ -1190,7 +1377,9 @@
         }
 
         // FIREBASE INITIAL REALTIME SYNC
-        db.collection("settings").get().then((snapshot) => {
+        // v4.2: { source: 'server' } – výchozí data se smí založit jen podle skutečného
+        // stavu na serveru. Offline (prázdná lokální cache) by jinak přepsaly ostrá data.
+        db.collection("settings").get({ source: 'server' }).then((snapshot) => {
             if (snapshot.empty) {
                 db.collection("settings").doc("customersDelivery").set({ list: defaultCustomers });
                 db.collection("settings").doc("customersPickup").set({ list: defaultCustomers });
@@ -1207,19 +1396,19 @@
                     });
                 });
             } else {
-                db.collection("settings").doc("carriers").get().then(doc => {
+                db.collection("settings").doc("carriers").get({ source: 'server' }).then(doc => {
                     if (!doc.exists) db.collection("settings").doc("carriers").set({ list: defaultCarriers });
                 });
-                db.collection("settings").doc("vehicles").get().then(doc => {
+                db.collection("settings").doc("vehicles").get({ source: 'server' }).then(doc => {
                     if (!doc.exists) db.collection("settings").doc("vehicles").set({ list: defaultVehicles });
                 });
-                db.collection("settings").doc("sandboxDirections").get().then(doc => {
+                db.collection("settings").doc("sandboxDirections").get({ source: 'server' }).then(doc => {
                     if (!doc.exists) db.collection("settings").doc("sandboxDirections").set({ list: defaultSandboxDirections });
-                });
+                }).catch(() => {});
             }
-        });
+        }).catch(() => { /* offline – výchozí data teď nezakládáme */ });
 
-        db.collection("settings").onSnapshot((snapshot) => {
+        db.collection("settings").onSnapshot({ includeMetadataChanges: true }, (snapshot) => {
             snapshot.forEach((doc) => {
                 if (doc.id === '_meta') {
                     const meta = doc.data() || {};
@@ -1236,7 +1425,8 @@
                 }
                 localStorage.setItem(doc.id, JSON.stringify(doc.data().list || []));
             });
-            _settingsLoaded = true;
+            // v4.2: jednorázové migrace pouštíme jen nad daty ze serveru, ne z offline cache
+            if (!snapshot.metadata.fromCache) _settingsLoaded = true;
             renderSettingsTab();
             populateAllDropdowns();
             renderDriversTab();
@@ -1280,7 +1470,7 @@
             renderTrailersTab();
         });
 
-        db.collection("driverCards").onSnapshot((snapshot) => {
+        db.collection("driverCards").onSnapshot({ includeMetadataChanges: true }, (snapshot) => {
             localDriverCards = [];
             snapshot.forEach((doc) => {
                 localDriverCards.push({ docId: doc.id, ...doc.data() });
@@ -1293,11 +1483,11 @@
             renderDriversTab();
             populateAllDropdowns();
             renderSandboxTab();
-            _driverCardsLoaded = true;
+            if (!snapshot.metadata.fromCache) _driverCardsLoaded = true;
             tryMigrateDrivers();
         });
 
-        db.collection("customerCards").onSnapshot((snapshot) => {
+        db.collection("customerCards").onSnapshot({ includeMetadataChanges: true }, (snapshot) => {
             localCustomerCards = [];
             snapshot.forEach((doc) => {
                 localCustomerCards.push({ docId: doc.id, ...doc.data() });
@@ -1305,7 +1495,7 @@
             localStorage.setItem('customerCards', JSON.stringify(localCustomerCards));
             renderCustomerCardsList();
             populateAllDropdowns();   // nabídky zákazníků teď vychází z Karet zákazníka
-            _cardsLoaded = true;
+            if (!snapshot.metadata.fromCache) _cardsLoaded = true;
             tryMigrateCustomers();
             tryRenameCustomerCards();
             trySeedDefaultsV2();
@@ -1325,37 +1515,37 @@
             const targetCustomer = document.getElementById('targetCustomer');
             if (targetCustomer) {
                 targetCustomer.innerHTML = '<option value="" disabled selected>Vyberte zákazníka...</option>' +
-                    availablePickupCustomers.map(c => `<option value="${c}">${c}</option>`).join('');
+                    availablePickupCustomers.map(c => `<option value="${escDC(c)}">${escDC(c)}</option>`).join('');
             }
 
             const trailerDriverSelect = document.getElementById('trailerDriverSelect');
             if (trailerDriverSelect) {
                 trailerDriverSelect.innerHTML = '<option value="" disabled selected>Vyberte řidiče...</option>' +
-                    drivers.map(d => `<option value="${d}">${d}</option>`).join('');
+                    drivers.map(d => `<option value="${escDC(d)}">${escDC(d)}</option>`).join('');
             }
 
             const trailerDeliverySelect = document.getElementById('trailerDeliverySelect');
             if (trailerDeliverySelect) {
                 trailerDeliverySelect.innerHTML = '<option value="" disabled selected>Vyberte rozvoz...</option>' +
-                    custDelivery.map(c => `<option value="${c}">${c}</option>`).join('');
+                    custDelivery.map(c => `<option value="${escDC(c)}">${escDC(c)}</option>`).join('');
             }
 
             const trailerPickupSelect = document.getElementById('trailerPickupSelect');
             if (trailerPickupSelect) {
                 trailerPickupSelect.innerHTML = '<option value="" disabled selected>Vyberte svoz...</option>' +
-                    custPickup.map(c => `<option value="${c}">${c}</option>`).join('');
+                    custPickup.map(c => `<option value="${escDC(c)}">${escDC(c)}</option>`).join('');
             }
 
             const driverCardCarrier = document.getElementById('driverCardCarrier');
             if (driverCardCarrier) {
                 driverCardCarrier.innerHTML = '<option value="" disabled selected>Vyberte dopravce...</option>' +
-                    carriers.map(c => `<option value="${c}">${c}</option>`).join('');
+                    carriers.map(c => `<option value="${escDC(c)}">${escDC(c)}</option>`).join('');
             }
 
             const driverCardSize = document.getElementById('driverCardSize');
             if (driverCardSize) {
                 driverCardSize.innerHTML = '<option value="" disabled selected>Vyberte velikost vozidla...</option>' +
-                    vehicles.map(v => `<option value="${v}">${v}</option>`).join('');
+                    vehicles.map(v => `<option value="${escDC(v)}">${escDC(v)}</option>`).join('');
             }
         }
 
@@ -1393,7 +1583,7 @@
             const dayTotals = getDayLoadTotalsByDriver(activeDate);
             grid.innerHTML = drivers.map(d => {
                 const active = isDriverActive(d);
-                const safe = String(d).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                const safe = jsArg(d); // v4.2: bezpečný argument pro onclick
                 const tile = active
                     ? 'bg-green-200 border-green-400 hover:bg-green-300'
                     : 'bg-red-200 border-red-400 hover:bg-red-300';
@@ -1408,13 +1598,13 @@
                     if (tot.fp) parts.push('FP ' + tot.fp);
                     if (tot.kh) parts.push('KH ' + tot.kh);
                     if (tot.pk) parts.push('PK ' + tot.pk);
-                    badge = '<div onclick="event.stopPropagation(); showDriverCard(\'' + safe + '\')" ' +
-                        'class="mt-1 text-[9px] font-black text-[#003366] bg-white/80 border border-white rounded px-1 py-0.5 leading-tight hover:bg-white" ' +
+                    badge = '<div onclick="event.stopPropagation(); showDriverCard(' + safe + ')" ' +
+                        'class="mt-1 text-xs font-bold text-[#003366] bg-white/80 border border-white rounded px-1 py-0.5 leading-tight hover:bg-white" ' +
                         'title="Zobrazit nakládky řidiče">' + parts.join(' · ') + '</div>';
                 }
-                return '<div onclick="toggleDriverActive(\'' + safe + '\')" class="cursor-pointer select-none rounded-lg p-2 text-center border transition-colors active:scale-95 ' + tile + '">' +
-                    '<div class="text-[12px] font-black uppercase leading-tight ' + nameColor + '">' + d + '</div>' +
-                    '<div class="text-[9px] font-bold uppercase tracking-wider ' + stateColor + '">' + (active ? 'aktivní' : 'neaktivní') + '</div>' +
+                return '<div onclick="toggleDriverActive(' + safe + ')" class="cursor-pointer select-none rounded-lg p-2 text-center border transition-colors active:scale-95 ' + tile + '">' +
+                    '<div class="text-[12px] font-bold uppercase leading-tight ' + nameColor + '">' + d + '</div>' +
+                    '<div class="text-xs font-bold uppercase tracking-wider ' + stateColor + '">' + (active ? 'aktivní' : 'neaktivní') + '</div>' +
                     badge +
                     '</div>';
             }).join('');
@@ -1447,19 +1637,19 @@
             let html = `
             <div class="space-y-3">
                 <div class="flex justify-between items-center border-b pb-1">
-                    <span class="text-[10px] font-black text-[#003366] dark:text-blue-300 uppercase">Výsledky vyhledávání</span>
+                    <span class="text-xs font-bold text-[#003366] dark:text-blue-300 uppercase">Výsledky vyhledávání</span>
                     <button onclick="clearGlobalSearch()" class="text-xs text-gray-400 font-bold hover:text-red-500">✕ Zavřít</button>
                 </div>`;
 
             if (matchedCards.length > 0) {
                 html += `
                 <div>
-                    <span class="text-[9px] font-bold text-amber-500 uppercase tracking-wider block mb-1">Dohledané Karty Řidičů</span>`;
+                    <span class="text-xs font-bold text-amber-500 uppercase tracking-wider block mb-1">Dohledané Karty Řidičů</span>`;
                 matchedCards.forEach(c => {
                     html += `
-                    <div class="text-xs border border-amber-200 p-2.5 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 mb-1.5 cursor-pointer hover:bg-amber-100/50 transition-colors" onclick="showDriverCard('${c.name}')">
-                        <p class="font-bold text-[#003366] dark:text-blue-300 uppercase hover:underline">📇 ${c.name} ${c.spz ? `(${c.spz})` : ''}</p>
-                        <p class="text-[10px] text-gray-500 dark:text-gray-300 mt-0.5">Dopravce: <b>${c.carrier || '-'}</b> | Vozidlo: <b>${c.vehicleSize || '-'}</b></p>
+                    <div class="text-xs border border-amber-200 p-2.5 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 mb-1.5 cursor-pointer hover:bg-amber-100/50 transition-colors" onclick="showDriverCard(${jsArg(c.name)})">
+                        <p class="font-bold text-[#003366] dark:text-blue-300 uppercase hover:underline">${ic('idcard')} ${escDC(c.name)} ${c.spz ? `(${c.spz})` : ''}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-300 mt-0.5">Dopravce: <b>${c.carrier || '-'}</b> | Vozidlo: <b>${c.vehicleSize || '-'}</b></p>
                     </div>`;
                 });
                 html += `</div>`;
@@ -1468,13 +1658,13 @@
             if (trailerPlans.length > 0) {
                 html += `
                 <div>
-                    <span class="text-[9px] font-bold text-blue-500 uppercase tracking-wider block mb-1">PLÁN NÁVĚSU (Rozvoz/Svoz)</span>`;
+                    <span class="text-xs font-bold text-blue-500 uppercase tracking-wider block mb-1">PLÁN NÁVĚSU (Rozvoz/Svoz)</span>`;
                 trailerPlans.forEach(p => {
                     html += `
-                    <div class="text-xs border border-gray-150 p-2 rounded-lg bg-slate-50 dark:bg-slate-700 mb-1">
-                        <p class="font-bold text-[#003366] dark:text-blue-300 cursor-pointer hover:underline uppercase" onclick="showDriverCard('${p.driver}')">🚚 ${p.driver} ${p.spz && p.spz !== 'BEZ SPZ' ? `(${p.spz})` : ''}</p>
-                        <p class="text-[10px] text-gray-500 dark:text-gray-300 mt-1">Rozvoz: ${p.deliveries.join(', ') || 'Bez rozvozu'}</p>
-                        <p class="text-[10px] text-gray-500 dark:text-gray-300">Svoz: ${p.pickups.join(', ') || 'Bez svozu'}</p>
+                    <div class="text-xs border border-gray-200 p-2 rounded-lg bg-slate-50 dark:bg-slate-700 mb-1">
+                        <p class="font-bold text-[#003366] dark:text-blue-300 cursor-pointer hover:underline uppercase" onclick="showDriverCard(${jsArg(p.driver)})">${ic('truck')} ${escDC(p.driver)} ${p.spz && p.spz !== 'BEZ SPZ' ? `(${p.spz})` : ''}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-300 mt-1">Rozvoz: ${p.deliveries.join(', ') || 'Bez rozvozu'}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-300">Svoz: ${p.pickups.join(', ') || 'Bez svozu'}</p>
                     </div>`;
                 });
                 html += `</div>`;
@@ -1483,14 +1673,14 @@
             if (pickups.length > 0) {
                 html += `
                 <div>
-                    <span class="text-[9px] font-bold text-emerald-600 uppercase tracking-wider block mb-1">ODVEZENÉ SVOZY (Palety)</span>`;
+                    <span class="text-xs font-bold text-emerald-600 uppercase tracking-wider block mb-1">ODVEZENÉ SVOZY (Palety)</span>`;
                 pickups.forEach(p => {
                     const target = localDailyTargets.find(t => t.id === p.targetId);
                     const custName = target ? target.customer : "Neznámý";
                     html += `
-                    <div class="text-xs bg-slate-50 dark:bg-slate-700 p-1.5 rounded border border-gray-150 mb-1 flex justify-between dark:border-slate-600">
-                        <span class="font-bold text-[#003366] dark:text-blue-300 cursor-pointer hover:underline uppercase" onclick="showDriverCard('${p.driver}')">${p.driver}</span>
-                        <span class="text-gray-500 dark:text-gray-300 font-semibold cursor-pointer hover:underline" onclick="showCustomerCard('${custName}')">➔ ${custName}</span>
+                    <div class="text-xs bg-slate-50 dark:bg-slate-700 p-1.5 rounded border border-gray-200 mb-1 flex justify-between dark:border-slate-600">
+                        <span class="font-bold text-[#003366] dark:text-blue-300 cursor-pointer hover:underline uppercase" onclick="showDriverCard(${jsArg(p.driver)})">${p.driver}</span>
+                        <span class="text-gray-500 dark:text-gray-300 font-semibold cursor-pointer hover:underline" onclick="showCustomerCard(${jsArg(custName)})">➔ ${custName}</span>
                     </div>`;
                 });
                 html += `</div>`;
@@ -1584,37 +1774,57 @@
             document.getElementById('detailsModal').classList.add('hidden');
         }
 
+        // v4.2: úprava cíle v jednom okně (dřív 3× prompt za sebou)
+        let editingTargetId = null;
         function editTarget(targetId) {
             const t = localDailyTargets.find(item => item.id === targetId);
             if (!t) return;
-            
-            const noveFP = prompt(`Upravit cílové FP pro ${t.customer}:`, t.targetFP || 0);
-            if (noveFP === null) return;
-            
-            const noveKH = prompt(`Upravit cílové KH pro ${t.customer}:`, t.targetKH || 0);
-            if (noveKH === null) return;
-
-            const novePK = prompt(`Upravit cílové PK pro ${t.customer}:`, t.targetPK || 0);
-            if (novePK === null) return;
-
-            db.collection("dailyTargets").doc(targetId).update({
-                targetFP: Math.max(0, parseInt(noveFP) || 0),
-                targetKH: Math.max(0, parseInt(noveKH) || 0),
-                targetPK: Math.max(0, parseInt(novePK) || 0)
-            }).catch(e => alert("Chyba při aktualizaci: " + e.message));
+            editingTargetId = targetId;
+            document.getElementById('editTargetCustomer').textContent = t.customer;
+            document.getElementById('editTargetFP').value = t.targetFP || 0;
+            document.getElementById('editTargetKH').value = t.targetKH || 0;
+            document.getElementById('editTargetPK').value = t.targetPK || 0;
+            const m = document.getElementById('editTargetModal');
+            m.classList.remove('hidden');
+            m.classList.add('flex');
+            setTimeout(() => { const f = document.getElementById('editTargetFP'); f.focus(); f.select(); }, 50);
         }
 
-        function deleteTarget(targetId) {
-            if (confirm("Opravdu chcete tohoto zákazníka smazat ze svozu? Smažou se i jeho dnes zadané nakládky.")) {
-                db.collection("dailyTargets").doc(targetId).delete();
-                
-                db.collection("pickups").where("targetId", "==", targetId).get().then((snapshot) => {
-                    snapshot.forEach((doc) => {
-                        doc.ref.delete();
-                    });
-                });
-                closeDetails();
+        function closeEditTarget() {
+            editingTargetId = null;
+            const m = document.getElementById('editTargetModal');
+            m.classList.remove('flex');
+            m.classList.add('hidden');
+        }
+
+        function saveEditTarget() {
+            if (!editingTargetId) return;
+            const val = id => Math.max(0, parseInt(document.getElementById(id).value) || 0);
+            const fp = val('editTargetFP'), kh = val('editTargetKH'), pk = val('editTargetPK');
+            if (fp === 0 && kh === 0 && pk === 0) {
+                alert('Cíl nesmí být nulový. Pokud zákazníka nechceš, odstraň ho ze svozu.');
+                return;
             }
+            const btn = document.getElementById('btnSaveEditTarget');
+            btn.disabled = true;
+            db.collection("dailyTargets").doc(editingTargetId).update({ targetFP: fp, targetKH: kh, targetPK: pk })
+                .then(() => closeEditTarget())
+                .catch(e => alert("Chyba při aktualizaci: " + e.message))
+                .finally(() => { btn.disabled = false; });
+        }
+
+        // v4.2: cíl i všechny jeho nakládky se mažou NARÁZ (db.batch) –
+        // při výpadku sítě uprostřed nezůstanou v databázi osiřelé nakládky.
+        function deleteTarget(targetId) {
+            if (!confirm("Opravdu chcete tohoto zákazníka smazat ze svozu? Smažou se i jeho dnes zadané nakládky.")) return;
+            db.collection("pickups").where("targetId", "==", targetId).get().then((snapshot) => {
+                const batch = db.batch();
+                batch.delete(db.collection("dailyTargets").doc(targetId));
+                snapshot.forEach((doc) => batch.delete(doc.ref));
+                return batch.commit();
+            }).then(() => {
+                closeDetails();
+            }).catch(e => alert("Smazání se nepovedlo, nic se nezměnilo: " + e.message));
         }
 
         function deletePickup(pickupId) {
@@ -1671,8 +1881,8 @@
 
             document.getElementById('modalCustomerName').innerHTML = `
                 <div class="flex items-center gap-3">
-                    <span class="hover:underline cursor-pointer" onclick="openCustomerCardFromTile(event, '${t.customer}')">🏢 ${t.customer}</span>
-                    <button onclick="editTarget('${t.id}')" class="text-slate-300 hover:text-[#003366] p-1.5 rounded-lg hover:bg-[#002244] transition-colors" title="Upravit dnešní plán">
+                    <span class="hover:underline cursor-pointer" onclick="openCustomerCardFromTile(event, ${jsArg(t.customer)})">${ic('building', 'w-5 h-5')} ${escDC(t.customer)}</span>
+                    <button onclick="editTarget(${jsArg(t.id)})" class="text-slate-300 hover:text-[#003366] p-1.5 rounded-lg hover:bg-[#002244] transition-colors" title="Upravit dnešní plán">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                         </svg>
@@ -1716,16 +1926,16 @@
                 const availableDrivers = driversList.filter(d => !driversWithPickups.includes(d));
 
                 if (availableDrivers.length > 0) {
-                    let driverOptions = availableDrivers.map(d => `<option value="${d}">${d}</option>`).join('');
+                    let driverOptions = availableDrivers.map(d => `<option value="${escDC(d)}">${escDC(d)}</option>`).join('');
                     
                     const isEditing = (editingPickupId !== null);
-                    const btnLabel = isEditing ? 'Uložit změny nakládky' : 'POTVRDIT NALOŽENÍ A ODEČÍST';
+                    const btnLabel = isEditing ? 'Uložit změny nakládky' : 'Potvrdit naložení a odečíst';
                     const btnColor = isEditing ? 'bg-amber-600 hover:bg-amber-700' : 'bg-[#003366] hover:bg-slate-900';
 
                     formContainer.innerHTML = `
                         <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-inner space-y-4">
                             <div class="flex justify-between items-center">
-                                <span class="text-[10px] font-black text-[#003366] uppercase tracking-wider">${isEditing ? 'Upravit zadanou nakládku' : 'ZAPSAT NAKLÁDKU ŘIDIČE'}</span>
+                                <span class="text-sm font-bold text-[#003366]">${isEditing ? 'Upravit zadanou nakládku' : 'Zapsat nakládku řidiče'}</span>
                                 <select id="modalDriverSelect" class="bg-white border border-gray-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-700 outline-none shadow-sm focus:border-[#003366] w-36 text-slate-800">
                                     ${driverOptions}
                                 </select>
@@ -1744,11 +1954,11 @@
                             </div>
                             
                             <div class="flex flex-col gap-2">
-                                <button onclick="saveModalPickup('${t.id}')" class="w-full ${btnColor} text-white text-xs font-bold py-3 rounded-lg active:scale-[0.99] transition-transform shadow-sm uppercase tracking-wider">
+                                <button onclick="saveModalPickup(${jsArg(t.id)})" class="w-full ${btnColor} text-white text-xs font-bold py-3 rounded-lg active:scale-[0.99] transition-transform shadow-sm">
                                     ${btnLabel}
                                 </button>
                                 ${isEditing ? `
-                                    <button onclick="cancelPickupEdit()" class="w-full bg-gray-200 hover:bg-gray-300 text-slate-700 text-xs font-bold py-2 rounded-lg active:scale-[0.99] transition-transform shadow-sm uppercase tracking-wider">
+                                    <button onclick="cancelPickupEdit()" class="w-full bg-gray-200 hover:bg-gray-300 text-slate-700 text-xs font-bold py-2 rounded-lg active:scale-[0.99] transition-transform shadow-sm">
                                         Zrušit úpravu
                                     </button>
                                 ` : ''}
@@ -1763,8 +1973,8 @@
             } else {
                 formContainer.innerHTML = `
                     <div class="bg-[#e6f0fa] border border-[#003366] p-4 rounded-xl text-center shadow-sm">
-                        <span class="text-[#003366] font-black text-xs block uppercase tracking-wider">✓ SVOZ DOKONČEN</span>
-                        <p class="text-[11px] text-[#003366] mt-0.5">U zákazníka již nezbývá nic k odvozu.</p>
+                        <span class="text-[#003366] font-bold text-sm block">✓ Svoz dokončen</span>
+                        <p class="text-xs text-[#003366] mt-0.5">U zákazníka již nezbývá nic k odvozu.</p>
                     </div>`;
             }
 
@@ -1774,21 +1984,21 @@
                 const driverCard = localDriverCards.find(c => c.name.toUpperCase() === p.driver.toUpperCase());
                 const cleanPhone = driverCard && driverCard.phone ? driverCard.phone.replace(/\s+/g, '') : '';
                 const phoneButton = cleanPhone 
-                    ? `<a href="tel:${cleanPhone}" class="w-7 h-7 flex items-center justify-center bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold rounded-full transition-colors animate-pulse" title="Zavolat řidiči ${p.driver}">📞</a>`
+                    ? `<a href="tel:${escDC(cleanPhone)}" class="w-9 h-9 flex items-center justify-center bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-full transition-colors" title="Zavolat řidiči ${escDC(p.driver)}">${ic('phone', 'w-4 h-4')}</a>`
                     : '';
 
                 historyHtml += `
                 <div class="flex justify-between items-center text-xs bg-white p-2.5 rounded-lg border border-gray-200 shadow-sm">
                     <div class="flex flex-col">
-                        <span class="font-black text-[#003366] cursor-pointer hover:underline text-[13px] uppercase tracking-wide flex items-center gap-1.5" onclick="showDriverCard('${p.driver}')">
-                            👤 ${p.driver}
+                        <span class="font-bold text-[#003366] cursor-pointer hover:underline text-sm flex items-center gap-1.5" onclick="showDriverCard(${jsArg(p.driver)})">
+                            ${ic('user', 'w-4 h-4')} ${escDC(p.driver)}
                         </span>
-                        <span class="text-[11px] text-gray-500 font-medium mt-0.5">Odvezl: <b>${p.fp} FP</b> | <b>${p.kh} KH</b> | <b>${p.pk || 0} PK</b></span>
+                        <span class="text-xs text-gray-500 font-medium mt-0.5">Odvezl: <b>${p.fp} FP</b> | <b>${p.kh} KH</b> | <b>${p.pk || 0} PK</b></span>
                     </div>
                     <div class="flex items-center gap-2">
                         ${phoneButton}
-                        <button onclick="editPickup('${p.id}')" class="text-xs text-amber-600 hover:underline font-bold px-1">upravit</button>
-                        <button onclick="deletePickup('${p.id}')" class="text-[#e30613] hover:text-red-800 font-bold px-1 text-sm" title="Stornovat nakládku">✕</button>
+                        <button onclick="editPickup(${jsArg(p.id)})" class="text-xs text-amber-600 hover:underline font-bold px-1">upravit</button>
+                        <button onclick="deletePickup(${jsArg(p.id)})" class="text-[#e30613] hover:text-red-800 font-bold px-1 text-sm" title="Stornovat nakládku">✕</button>
                     </div>
                 </div>`;
             });
@@ -1854,7 +2064,7 @@
             const todayTargets = targets.filter(t => t.date === activeDate);
 
             if (todayTargets.length === 0) {
-                container.innerHTML = '<div class="col-span-2 sm:col-span-3 md:col-span-4 lg:col-span-5 text-sm text-gray-400 text-center py-8 bg-white rounded-xl border border-dashed border-gray-300 font-medium shadow-sm">Žádný zákazník není pro tento den aktivní.<br><span class="text-[11px] text-gray-400 font-normal">Zadejte cíl ve formuláři výše.</span></div>';
+                container.innerHTML = '<div class="col-span-2 sm:col-span-3 md:col-span-4 lg:col-span-5 text-sm text-gray-400 text-center py-8 bg-white rounded-xl border border-dashed border-gray-300 font-medium shadow-sm">Žádný zákazník není pro tento den aktivní.<br><span class="text-xs text-gray-400 font-normal">Zadejte cíl ve formuláři výše.</span></div>';
                 return;
             }
 
@@ -1918,36 +2128,34 @@
                 const pct = item.progressPercent;
 
                 let tileHtml = '';
+                // v4.2: tmavší zelená (kontrast bílého textu 5 : 1 místo 2,4 : 1),
+                // větší čísla, neutrální progress bar, ID místo jména v onclick.
+                const custArg = jsArg(t.customer);
+                const custTxt = escDC(t.customer);
                 if (isDone) {
                     tileHtml = `
-                    <div class="bg-[#4abe6a] text-white border-l-[4px] border-[#96c11f] border-y border-r border-[#4abe6a] rounded-xl p-2.5 shadow-md active:scale-95 transition-all cursor-pointer flex flex-col justify-between h-[80px]" onclick="openDetails('${t.id}')">
-                        <div class="font-black text-white text-xs truncate flex justify-between items-center">
-                            <span class="hover:underline cursor-pointer" onclick="openCustomerCardFromTile(event, '${t.customer}')">🏢 ${t.customer}</span>
-                            <span class="text-xs text-[#96c11f]">✔</span>
+                    <div class="bg-[#15803d] text-white border-l-[4px] border-[#14532d] rounded-xl p-2.5 shadow-md active:scale-95 transition-all cursor-pointer flex flex-col justify-between gap-2 min-h-[88px]" onclick="openDetails(${jsArg(t.id)})">
+                        <div class="font-bold text-white text-sm truncate">
+                            <span class="hover:underline cursor-pointer" onclick="openCustomerCardFromTile(event, ${custArg})">${ic('building', 'w-4 h-4')} ${custTxt}</span>
                         </div>
-                        <div class="text-[9px] font-black text-center text-white bg-[#379d55] py-1 rounded-md uppercase tracking-widest leading-none mt-auto">
-                            HOTOVO
+                        <div class="text-xs font-bold text-center text-white bg-[#166534] py-1 rounded-md leading-none flex items-center justify-center gap-1">
+                            ${ic('check', 'w-4 h-4')} Hotovo
                         </div>
                     </div>`;
                 } else {
+                    const num = (label, val) => `
+                            <div class="bg-[#f1f5f9] border border-gray-200 rounded-md py-0.5 text-center">
+                                <div class="text-xs text-slate-500 leading-tight">${label}</div>
+                                <div class="text-base font-bold leading-tight ${val > 0 ? 'text-[#003366]' : 'text-gray-400'}">${val}</div>
+                            </div>`;
                     tileHtml = `
-                    <div onclick="openDetails('${t.id}')" class="bg-white border-l-[4px] border-[#003366] border-y border-r border-gray-300 rounded-xl p-2.5 shadow-sm hover:border-[#003366] active:scale-95 transition-all cursor-pointer flex flex-col justify-between h-[80px]">
-                        <div class="font-black text-slate-800 text-xs truncate hover:underline cursor-pointer" onclick="openCustomerCardFromTile(event, '${t.customer}')" title="${t.customer}">🏢 ${t.customer}</div>
-                        
-                        <div class="flex items-center justify-between text-[9px] text-gray-700 font-bold mt-1 gap-1">
-                            <span class="bg-[#f1f5f9] text-slate-800 px-1.5 py-0.5 rounded border border-gray-200 truncate">
-                                FP: <b class="${remainingFP > 0 ? 'text-[#003366]' : 'text-gray-400'}">${remainingFP}</b>
-                            </span>
-                            <span class="bg-[#f1f5f9] text-slate-800 px-1.5 py-0.5 rounded border border-gray-200 truncate">
-                                KH: <b class="${remainingKH > 0 ? 'text-[#003366]' : 'text-gray-400'}">${remainingKH}</b>
-                            </span>
-                            <span class="bg-[#f1f5f9] text-slate-800 px-1.5 py-0.5 rounded border border-gray-200 truncate">
-                                PK: <b class="${remainingPK > 0 ? 'text-[#003366]' : 'text-gray-400'}">${remainingPK}</b>
-                            </span>
+                    <div onclick="openDetails(${jsArg(t.id)})" class="bg-white border-l-[4px] border-[#003366] border-y border-r border-gray-300 rounded-xl p-2.5 shadow-sm hover:border-[#003366] active:scale-95 transition-all cursor-pointer flex flex-col justify-between gap-1.5 min-h-[88px]">
+                        <div class="font-bold text-slate-800 text-sm truncate hover:underline cursor-pointer" onclick="openCustomerCardFromTile(event, ${custArg})" title="${custTxt}">${ic('building', 'w-4 h-4')} ${custTxt}</div>
+                        <div class="grid grid-cols-3 gap-1">
+                            ${num('FP', remainingFP)}${num('KH', remainingKH)}${num('PK', remainingPK)}
                         </div>
-                        
-                        <div class="w-full bg-red-100 h-1.5 rounded-full mt-1.5 overflow-hidden">
-                            <div class="bg-emerald-500 h-1.5 transition-all duration-300" style="width: ${pct}%"></div>
+                        <div class="w-full bg-gray-200 dark:bg-slate-600 h-1.5 rounded-full overflow-hidden" title="Naloženo ${pct} %">
+                            <div class="bg-[#003366] dark:bg-blue-400 h-1.5 transition-all duration-300" style="width: ${pct}%"></div>
                         </div>
                     </div>`;
                 }
@@ -2094,12 +2302,12 @@
                     <!-- Horní řádek -->
                     <div class="flex justify-between items-start border-b border-slate-700/50 pb-2">
                         <div>
-                            <span class="text-[8px] font-bold text-slate-400 block tracking-wider uppercase mb-0.5">${p.spz && p.spz !== 'BEZ SPZ' ? p.spz : 'BEZ SPZ'}</span>
-                            <h4 class="font-black text-slate-100 uppercase cursor-pointer hover:underline text-sm" onclick="showDriverCard('${p.driver}')">👤 ${p.driver}</h4>
+                            <span class="text-xs font-bold text-slate-400 block tracking-wider uppercase mb-0.5">${p.spz && p.spz !== 'BEZ SPZ' ? p.spz : 'BEZ SPZ'}</span>
+                            <h4 class="font-bold text-slate-100 cursor-pointer hover:underline text-sm" onclick="showDriverCard(${jsArg(p.driver)})">${ic('user')} ${escDC(p.driver)}</h4>
                         </div>
                         <div class="flex items-center gap-2.5">
-                            <button onclick="editTrailerPlan('${p.id}')" class="text-xs text-amber-500 hover:underline font-bold uppercase tracking-wider">Upravit</button>
-                            <button onclick="deleteTrailerPlan('${p.id}')" class="text-red-400 hover:text-red-600 transition-colors" title="Odstranit">
+                            <button onclick="editTrailerPlan(${jsArg(p.id)})" class="text-xs text-amber-500 hover:underline font-bold">Upravit</button>
+                            <button onclick="deleteTrailerPlan(${jsArg(p.id)})" class="text-red-400 hover:text-red-600 transition-colors" title="Odstranit">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                             </button>
                         </div>
@@ -2108,21 +2316,21 @@
                     <!-- Spodní sekce -->
                     <div class="grid grid-cols-2 gap-3 pt-1">
                         <div class="space-y-1.5 bg-slate-800/40 p-2 rounded-lg border border-slate-700/50">
-                            <span class="text-[9px] font-black text-blue-400 uppercase tracking-widest block mb-1">ROZVOZ</span>
+                            <span class="text-xs font-bold text-blue-400 uppercase tracking-widest block mb-1">ROZVOZ</span>
                             <div class="flex flex-col gap-1">
                                 ${p.deliveries && p.deliveries.length > 0 
-                                    ? p.deliveries.map(d => `<span class="bg-blue-950/80 text-blue-200 text-[10px] font-bold px-2 py-1 rounded border border-blue-900 cursor-pointer hover:underline break-words whitespace-normal text-left" onclick="openCustomerCardFromTile(event, '${d}')" title="${d}">${d}</span>`).join('')
-                                    : '<span class="text-[10px] text-slate-500 italic font-medium">Bez rozvozu</span>'
+                                    ? p.deliveries.map(d => `<span class="bg-blue-950/80 text-blue-200 text-xs font-bold px-2 py-1 rounded border border-blue-900 cursor-pointer hover:underline break-words whitespace-normal text-left" onclick="openCustomerCardFromTile(event, ${jsArg(d)})" title="${d}">${d}</span>`).join('')
+                                    : '<span class="text-xs text-slate-500 italic font-medium">Bez rozvozu</span>'
                                 }
                             </div>
                         </div>
 
                         <div class="space-y-1.5 bg-slate-800/40 p-2 rounded-lg border border-slate-700/50">
-                            <span class="text-[9px] font-black text-emerald-400 uppercase tracking-widest block mb-1">SVOZ</span>
+                            <span class="text-xs font-bold text-emerald-400 uppercase tracking-widest block mb-1">SVOZ</span>
                             <div class="flex flex-col gap-1">
                                 ${p.pickups && p.pickups.length > 0 
-                                    ? p.pickups.map(s => `<span class="bg-emerald-950/80 text-emerald-200 text-[10px] font-bold px-2 py-1 rounded border border-emerald-900 cursor-pointer hover:underline break-words whitespace-normal text-left" onclick="openCustomerCardFromTile(event, '${s}')" title="${s}">${s}</span>`).join('')
-                                    : '<span class="text-[10px] text-slate-500 italic font-medium">Bez svozu</span>'
+                                    ? p.pickups.map(s => `<span class="bg-emerald-950/80 text-emerald-200 text-xs font-bold px-2 py-1 rounded border border-emerald-900 cursor-pointer hover:underline break-words whitespace-normal text-left" onclick="openCustomerCardFromTile(event, ${jsArg(s)})" title="${s}">${s}</span>`).join('')
+                                    : '<span class="text-xs text-slate-500 italic font-medium">Bez svozu</span>'
                                 }
                             </div>
                         </div>
@@ -2200,7 +2408,7 @@
             }
 
             container.innerHTML = directions.map(dir => {
-                const safeDir = String(dir.name).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                const safeDir = dir.name; // v4.2: escapuje jsArg() přímo v onclick
                 const rows = plan[dir.name] || [];
                 const displayRows = rows.length > 0 ? rows : [''];
                 const filledCount = rows.filter(r => r).length;
@@ -2214,22 +2422,22 @@
                         driverNames.map(n => `<option value="${n}" ${n === driverName ? 'selected' : ''}>${n}</option>`).join('');
                     return `
                     <div class="flex items-center gap-1.5">
-                        <select onchange="setSandboxDriver('${safeDir}', ${idx}, this.value)" class="flex-1 bg-gray-50 dark:bg-slate-850 border border-gray-300 dark:border-slate-700 rounded-lg p-1.5 text-xs font-bold uppercase outline-none focus:border-[#003366] text-black dark:text-white">
+                        <select onchange="setSandboxDriver(${jsArg(safeDir)}, ${idx}, this.value)" class="flex-1 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg p-1.5 text-xs font-bold uppercase outline-none focus:border-[#003366] text-black dark:text-white">
                             ${options}
                         </select>
-                        <button onclick="removeSandboxRow('${safeDir}', ${idx})" class="text-[#e30613] hover:text-red-700 font-bold text-sm px-1.5 transition-transform active:scale-90">✕</button>
+                        <button onclick="removeSandboxRow(${jsArg(safeDir)}, ${idx})" class="text-[#e30613] hover:text-red-700 font-bold text-sm px-1.5 transition-transform active:scale-90">✕</button>
                     </div>`;
                 }).join('');
 
                 return `
                 <div class="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
                     <div class="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
-                        <span class="font-black text-xs uppercase text-slate-800 dark:text-slate-100">${dir.name}</span>
-                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${badgeCls}">${filledCount} / ${dir.expected} vozidel</span>
+                        <span class="font-bold text-xs uppercase text-slate-800 dark:text-slate-100">${dir.name}</span>
+                        <span class="text-xs font-bold px-2 py-0.5 rounded-full border ${badgeCls}">${filledCount} / ${dir.expected} vozidel</span>
                     </div>
                     <div class="p-2 space-y-1.5">
                         ${rowsHtml}
-                        <button onclick="addSandboxRow('${safeDir}')" class="text-[10px] text-[#003366] dark:text-blue-300 font-bold hover:underline pt-0.5">+ Přidat vozidlo</button>
+                        <button onclick="addSandboxRow(${jsArg(safeDir)})" class="text-xs text-[#003366] dark:text-blue-300 font-bold hover:underline pt-0.5">+ Přidat vozidlo</button>
                     </div>
                 </div>`;
             }).join('');
@@ -2286,13 +2494,13 @@
                 return;
             }
             el.innerHTML = list.map(d => {
-                const safe = String(d.name).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                const safe = d.name; // v4.2: escapuje jsArg() přímo v onclick
                 return `
                 <div class="flex justify-between items-center bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 p-2.5 rounded-xl shadow-sm font-bold uppercase">
                     <span class="text-slate-800 dark:text-slate-100 text-xs">${d.name}</span>
                     <div class="flex items-center gap-2">
-                        <input type="number" min="1" value="${d.expected}" onchange="updateSandboxDirectionExpected('${safe}', this.value)" title="Očekávaný počet vozidel" class="w-14 bg-gray-50 dark:bg-slate-850 border border-gray-300 dark:border-slate-700 rounded-lg p-1 text-center text-xs font-bold text-black dark:text-white">
-                        <button onclick="removeSandboxDirection('${safe}')" class="text-[#e30613] hover:text-red-700 font-bold text-sm px-1 transition-transform active:scale-90">✕</button>
+                        <input type="number" min="1" value="${d.expected}" onchange="updateSandboxDirectionExpected(${jsArg(safe)}, this.value)" title="Očekávaný počet vozidel" class="w-14 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg p-1 text-center text-xs font-bold text-black dark:text-white">
+                        <button onclick="removeSandboxDirection(${jsArg(safe)})" class="text-[#e30613] hover:text-red-700 font-bold text-sm px-1 transition-transform active:scale-90">✕</button>
                     </div>
                 </div>`;
             }).join('');
@@ -2352,11 +2560,11 @@
                 // list.sort(), který diakritiku řadí jinak než čeština) – to byla příčina
                 // mazání "jiné" položky o řádek/dva níže. Viz funkce removeItem().
                 return arr.map((item) => {
-                    const safe = String(item).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                    const safe = item; // v4.2: escapuje jsArg() přímo v onclick
                     return `
                     <div class="flex justify-between items-center bg-white border border-gray-200 p-3 rounded-xl shadow-sm font-bold uppercase transition-all hover:bg-slate-50">
                         <span class="font-bold text-slate-800 text-xs tracking-wide">${item}</span>
-                        <button onclick="removeItem('${key}', '${safe}')" class="text-[#e30613] font-bold px-2 hover:text-red-700 transition-transform active:scale-90 text-sm">✕</button>
+                        <button onclick="removeItem(${jsArg(key)}, ${jsArg(safe)})" class="text-[#e30613] font-bold px-2 hover:text-red-700 transition-transform active:scale-90 text-sm">✕</button>
                     </div>
                 `;
                 }).join('');
@@ -2536,29 +2744,29 @@
             listContainer.innerHTML = cards.map(c => {
                 const cleanPhone = c.phone ? c.phone.replace(/\s+/g, '') : '';
                 const phoneHtml = cleanPhone 
-                    ? `<a href="tel:${cleanPhone}" class="inline-flex items-center gap-1.5 bg-[#e6f0fa] hover:bg-blue-150 text-[#003366] font-bold px-2.5 py-1 rounded-lg text-xs transition-colors border border-blue-200">
-                         📞 ${c.phone}
+                    ? `<a href="tel:${cleanPhone}" class="inline-flex items-center gap-1.5 bg-[#e6f0fa] hover:bg-blue-100 text-[#003366] font-bold px-2.5 py-1 rounded-lg text-xs transition-colors border border-blue-200">
+                         ${ic('phone')} ${escDC(c.phone)}
                        </a>`
-                    : '<span class="text-gray-400 text-[11px] italic">Bez tel. čísla</span>';
+                    : '<span class="text-gray-400 text-xs italic">Bez tel. čísla</span>';
 
                 return `
                 <div class="bg-white border border-gray-200 rounded-lg p-2.5 shadow-sm space-y-1.5 text-xs dark:bg-slate-800 dark:border-slate-700">
                     <div class="flex justify-between items-start">
                         <div>
-                            <span class="font-black text-slate-800 dark:text-slate-100 uppercase">${c.name}</span>
-                            ${c.spz ? `<span class="bg-gray-100 text-gray-600 font-bold px-1.5 py-0.5 rounded ml-2 text-[10px] dark:bg-slate-700 dark:text-slate-200">${c.spz}</span>` : ''}
+                            <span class="font-bold text-slate-800 dark:text-slate-100 uppercase">${c.name}</span>
+                            ${c.spz ? `<span class="bg-gray-100 text-gray-600 font-bold px-1.5 py-0.5 rounded ml-2 text-xs dark:bg-slate-700 dark:text-slate-200">${c.spz}</span>` : ''}
                         </div>
                         <div class="flex items-center gap-2">
-                            <button onclick="editDriverCard('${c.id}')" class="text-xs text-amber-600 hover:underline font-bold">Upravit</button>
-                            <button onclick="deleteDriverCard('${c.id}')" class="text-[#e30613] hover:text-red-700 font-bold text-sm">✕</button>
+                            <button onclick="editDriverCard(${jsArg(c.id)})" class="text-xs text-amber-600 hover:underline font-bold">Upravit</button>
+                            <button onclick="deleteDriverCard(${jsArg(c.id)})" class="text-[#e30613] hover:text-red-700 font-bold text-sm">✕</button>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-1 text-[11px] text-gray-500 dark:text-gray-400">
+                    <div class="grid grid-cols-2 gap-1 text-xs text-gray-500 dark:text-gray-400">
                         <p>Dopravce: <span class="font-semibold text-slate-700 dark:text-slate-200">${c.carrier || '-'}</span></p>
                         <p>Vozidlo: <span class="font-semibold text-slate-700 dark:text-slate-200">${c.vehicleSize || '-'}</span></p>
                     </div>
                     <div class="pt-1.5 flex justify-between items-center border-t border-gray-100 dark:border-slate-700">
-                        <span class="text-[10px] text-gray-400 font-semibold uppercase">Přímé vytáčení:</span>
+                        <span class="text-xs text-gray-400 font-semibold uppercase">Přímé vytáčení:</span>
                         ${phoneHtml}
                     </div>
                 </div>`;
@@ -2681,7 +2889,7 @@
             const data = getDriverDayLoadings(driverName, activeDate);
             const dateLabel = escDC(formatDateToCzech(activeDate));
 
-            const headline = '<p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">' +
+            const headline = '<p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">' +
                 'Nakládky – ' + dateLabel + '</p>';
 
             if (data.rows.length === 0) {
@@ -2696,14 +2904,14 @@
 
             // Štítek se zobrazí jen u nenulové hodnoty (KH: 0 je zbytečný šum).
             const chip = (label, value, cls) => (value > 0
-                ? `<span class="px-1.5 py-0.5 rounded-md text-[11px] font-black ${cls}">${label}: ${value}</span>`
+                ? `<span class="px-1.5 py-0.5 rounded-md text-xs font-bold ${cls}">${label}: ${value}</span>`
                 : '');
 
             const rowsHtml = data.rows.map(r => `
-                <div onclick="openTargetFromDriverCard('${escDC(r.targetId)}')"
+                <div onclick="openTargetFromDriverCard(${jsArg(r.targetId)})"
                      class="flex justify-between items-center gap-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg p-2.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors active:scale-[0.99]"
                      title="Otevřít přehled svozu u zákazníka ${escDC(r.customer)}">
-                    <span class="font-black text-[#003366] dark:text-blue-300 text-[13px] uppercase tracking-wide truncate">🏢 ${escDC(r.customer)}</span>
+                    <span class="font-bold text-[#003366] dark:text-blue-300 text-[13px] uppercase tracking-wide truncate">${ic('building')} ${escDC(r.customer)}</span>
                     <span class="flex items-center gap-1 shrink-0">
                         ${chip('FP', r.fp, 'bg-[#e6f0fa] text-[#003366]')}
                         ${chip('KH', r.kh, 'bg-amber-100 text-amber-800')}
@@ -2725,17 +2933,17 @@
                 capHtml = `
                     <div class="mt-2 bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-xl p-2.5">
                         <div class="flex justify-between items-baseline mb-1 gap-2">
-                            <span class="text-[9px] uppercase font-bold text-gray-400 tracking-wider">Vytížení vozidla</span>
-                            <span class="text-[11px] font-black ${txtColor}">${fmtNumDC(data.units)} / ${cap} míst · ${pct} %</span>
+                            <span class="text-xs uppercase font-bold text-gray-400 tracking-wider">Vytížení vozidla</span>
+                            <span class="text-xs font-bold ${txtColor}">${fmtNumDC(data.units)} / ${cap} míst · ${pct} %</span>
                         </div>
                         <div class="w-full h-2 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
                             <div class="h-full ${barColor} rounded-full transition-all" style="width:${barPct}%"></div>
                         </div>
-                        <p class="text-[9px] text-gray-400 mt-1">Přepočet na paletová místa: FP = 1, KH = 0,5. PK se do vytížení nepočítá.</p>
+                        <p class="text-xs text-gray-400 mt-1">Přepočet na paletová místa: FP = 1, KH = 0,5. PK se do vytížení nepočítá.</p>
                     </div>`;
             } else if (card) {
                 capHtml = `
-                    <div class="mt-2 text-[10px] text-gray-400 italic text-center">
+                    <div class="mt-2 text-xs text-gray-400 italic text-center">
                         Vytížení nelze spočítat – na kartě řidiče není typ vozidla s počtem palet (např. „NÁVĚS 33 PAL.“).
                     </div>`;
             }
@@ -2744,9 +2952,9 @@
                 <div class="pt-3 border-t border-gray-100 dark:border-slate-700">
                     ${headline}
                     <div class="flex flex-wrap items-center gap-1.5 mb-2">
-                        <span class="text-[11px] font-black text-slate-600 dark:text-slate-300">${data.stops} ${stopsWordDC(data.stops)}</span>
+                        <span class="text-xs font-bold text-slate-600 dark:text-slate-300">${data.stops} ${stopsWordDC(data.stops)}</span>
                         <span class="text-gray-300">·</span>
-                        <span class="text-[11px] font-black text-slate-600 dark:text-slate-300">Celkem:</span>
+                        <span class="text-xs font-bold text-slate-600 dark:text-slate-300">Celkem:</span>
                         ${chip('FP', data.totals.fp, 'bg-[#003366] text-white')}
                         ${chip('KH', data.totals.kh, 'bg-amber-500 text-white')}
                         ${chip('PK', data.totals.pk, 'bg-slate-500 text-white')}
@@ -2796,14 +3004,14 @@
                 const cleanPhone = card.phone ? card.phone.replace(/\s+/g, '') : '';
                 
                 const phoneButton = cleanPhone 
-                    ? `<a href="tel:${cleanPhone}" class="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl text-sm transition-colors shadow-sm font-sans tracking-wide">
-                         📞 Zavolat řidiči (${card.phone})
+                    ? `<a href="tel:${cleanPhone}" class="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl text-sm transition-colors shadow-sm font-sans">
+                         ${ic('phone')} Zavolat řidiči (${card.phone})
                        </a>`
                     : `<div class="text-center text-xs text-gray-400 italic bg-gray-50 p-3 rounded-xl border">Telefonní číslo nebylo zadáno</div>`;
 
                 const smsButton = cleanPhone
-                    ? `<a href="sms:${cleanPhone}" class="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl text-sm transition-colors shadow-sm font-sans tracking-wide mt-2">
-                         💬 Odeslat SMS řidiči
+                    ? `<a href="sms:${cleanPhone}" class="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl text-sm transition-colors shadow-sm font-sans mt-2">
+                         ${ic('chat')} Odeslat SMS řidiči
                        </a>`
                     : '';
 
@@ -2811,18 +3019,18 @@
                     <div class="space-y-4">
                         <div class="grid grid-cols-2 gap-3 text-xs">
                             <div class="bg-gray-50 dark:bg-slate-900 p-3 rounded-xl border border-gray-100 dark:border-slate-800">
-                                <span class="text-[9px] uppercase font-bold text-gray-400 block tracking-wider mb-0.5">SPZ VOZIDLA</span>
-                                <span class="font-black text-slate-800 dark:text-slate-200 text-sm">${card.spz || 'NENÍ ZADÁNA'}</span>
+                                <span class="text-xs uppercase font-bold text-gray-400 block tracking-wider mb-0.5">SPZ VOZIDLA</span>
+                                <span class="font-bold text-slate-800 dark:text-slate-200 text-sm">${card.spz || 'NENÍ ZADÁNA'}</span>
                             </div>
                             <div class="bg-gray-50 dark:bg-slate-900 p-3 rounded-xl border border-gray-100 dark:border-slate-800">
-                                <span class="text-[9px] uppercase font-bold text-gray-400 block tracking-wider mb-0.5">VELIKOST / TYP VOZIDLA</span>
-                                <span class="font-black text-slate-800 dark:text-slate-200 text-sm truncate block" title="${card.vehicleSize || '-'}">${card.vehicleSize || 'NEUVEDENA'}</span>
+                                <span class="text-xs uppercase font-bold text-gray-400 block tracking-wider mb-0.5">VELIKOST / TYP VOZIDLA</span>
+                                <span class="font-bold text-slate-800 dark:text-slate-200 text-sm truncate block" title="${card.vehicleSize || '-'}">${card.vehicleSize || 'NEUVEDENA'}</span>
                             </div>
                         </div>
                         
                         <div class="bg-gray-50 dark:bg-slate-900 p-3 rounded-xl border border-gray-100 dark:border-slate-800 text-xs">
-                            <span class="text-[9px] uppercase font-bold text-gray-400 block tracking-wider mb-0.5">DOPRAVCE</span>
-                            <span class="font-black text-slate-800 dark:text-slate-200 text-sm">${card.carrier || 'NEUVEDEN'}</span>
+                            <span class="text-xs uppercase font-bold text-gray-400 block tracking-wider mb-0.5">DOPRAVCE</span>
+                            <span class="font-bold text-slate-800 dark:text-slate-200 text-sm">${card.carrier || 'NEUVEDEN'}</span>
                         </div>
 
                         <div class="pt-1">
@@ -2833,7 +3041,7 @@
                         ${dayLoadHtml}
                         
                         <div class="pt-3 border-t border-gray-100 dark:border-slate-700 flex justify-between items-center text-xs">
-                            <button onclick="goToEditDriverCard('${card.id}')" class="text-[#003366] hover:underline font-bold">✏️ Upravit v nastavení</button>
+                            <button onclick="goToEditDriverCard(${jsArg(card.id)})" class="text-[#003366] hover:underline font-bold inline-flex items-center gap-1">${ic('pencil')} Upravit v nastavení</button>
                             <button onclick="closeDriverCardModal()" class="text-gray-400 hover:text-slate-600 font-semibold">Zavřít</button>
                         </div>
                     </div>
@@ -2842,14 +3050,14 @@
                 body.innerHTML = `
                     <div class="space-y-4 text-center py-2">
                         <div class="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center mx-auto text-amber-500 border border-amber-200 text-lg">
-                            ⚠️
+                            ${ic('warning', 'w-6 h-6')}
                         </div>
                         <div class="space-y-1">
                             <h4 class="text-sm font-bold text-slate-800">Profil řidiče nenalezen</h4>
                             <p class="text-xs text-gray-400">Pro jméno <b>${normName}</b> nebyla vytvořena karta řidiče.</p>
                         </div>
-                        <button onclick="quickCreateDriverCardFromModal('${normName}')" class="w-full bg-[#003366] hover:bg-black text-white font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition-colors shadow-sm mt-2">
-                            ➕ Vytvořit kartu řidiče
+                        <button onclick="quickCreateDriverCardFromModal(${jsArg(normName)})" class="w-full bg-[#003366] hover:bg-black text-white font-bold py-3 rounded-xl text-xs transition-colors shadow-sm mt-2">
+                            ${ic('plus')} Vytvořit kartu řidiče
                         </button>
 
                         <div class="text-left">
@@ -3003,29 +3211,29 @@
             listContainer.innerHTML = cards.map(c => {
                 const cleanPhone = c.phone ? c.phone.replace(/\s+/g, '') : '';
                 const phoneHtml = cleanPhone 
-                    ? `<a href="tel:${cleanPhone}" class="inline-flex items-center gap-1.5 bg-[#e6f0fa] hover:bg-blue-150 text-[#003366] font-bold px-2.5 py-1 rounded-lg text-xs transition-colors border border-blue-200">
-                         📞 ${c.phone}
+                    ? `<a href="tel:${cleanPhone}" class="inline-flex items-center gap-1.5 bg-[#e6f0fa] hover:bg-blue-100 text-[#003366] font-bold px-2.5 py-1 rounded-lg text-xs transition-colors border border-blue-200">
+                         ${ic('phone')} ${escDC(c.phone)}
                        </a>`
-                    : '<span class="text-gray-400 text-[11px] italic">Bez tel. čísla</span>';
+                    : '<span class="text-gray-400 text-xs italic">Bez tel. čísla</span>';
 
                 const emailHtml = c.email 
                     ? `<a href="mailto:${c.email}" class="inline-flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold px-2.5 py-1 rounded-lg text-xs transition-colors border border-blue-200">
-                         ✉️ ${c.email}
+                         ${ic('mail')} ${escDC(c.email)}
                        </a>`
-                    : '<span class="text-gray-400 text-[11px] italic">Bez e-mailu</span>';
+                    : '<span class="text-gray-400 text-xs italic">Bez e-mailu</span>';
 
                 return `
                 <div class="bg-white border border-gray-200 rounded-lg p-3.5 shadow-sm space-y-2 text-xs dark:bg-slate-800 dark:border-slate-700">
                     <div class="flex justify-between items-start">
                         <div>
-                            <span class="font-black text-slate-800 dark:text-slate-100 uppercase text-sm">${c.name}</span>
+                            <span class="font-bold text-slate-800 dark:text-slate-100 uppercase text-sm">${c.name}</span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button onclick="editCustomerCard('${c.id}')" class="text-xs text-amber-600 hover:underline font-bold">Upravit</button>
-                            <button onclick="deleteCustomerCard('${c.id}')" class="text-[#e30613] hover:text-red-700 font-bold text-sm">✕</button>
+                            <button onclick="editCustomerCard(${jsArg(c.id)})" class="text-xs text-amber-600 hover:underline font-bold">Upravit</button>
+                            <button onclick="deleteCustomerCard(${jsArg(c.id)})" class="text-[#e30613] hover:text-red-700 font-bold text-sm">✕</button>
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] text-gray-500 dark:text-gray-400">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs text-gray-500 dark:text-gray-400">
                         <p>Adresa: <span class="font-bold text-slate-700 dark:text-slate-200">${c.address || '-'}</span></p>
                         <p>Kontaktní osoba: <span class="font-bold text-slate-700 dark:text-slate-200">${c.contact || '-'}</span></p>
                     </div>
@@ -3053,13 +3261,13 @@
                 const cleanPhone = card.phone ? card.phone.replace(/\s+/g, '') : '';
                 const phoneHtml = cleanPhone 
                     ? `<a href="tel:${cleanPhone}" class="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-3 rounded-lg text-xs transition-colors shadow-sm font-sans">
-                         📞 Zavolat (${card.phone})
+                         ${ic('phone')} Zavolat (${card.phone})
                        </a>`
                     : '';
 
                 const emailHtml = card.email 
                     ? `<a href="mailto:${card.email}" class="flex-1 flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-3 rounded-lg text-xs transition-colors shadow-sm font-sans">
-                         ✉️ Odeslat e-mail
+                         ${ic('mail')} Odeslat e-mail
                        </a>`
                     : '';
 
@@ -3067,19 +3275,19 @@
                     <div class="space-y-4">
                         <div class="bg-gray-50 dark:bg-slate-900 p-3 rounded-xl border border-gray-100 dark:border-slate-800 text-xs space-y-2.5">
                             <div>
-                                <span class="text-[9px] uppercase font-bold text-gray-400 block tracking-wider mb-0.5">Adresa provozovny</span>
-                                <span class="font-black text-slate-800 dark:text-slate-200 text-xs">${card.address || 'NEZADÁNA'}</span>
+                                <span class="text-xs uppercase font-bold text-gray-400 block tracking-wider mb-0.5">Adresa provozovny</span>
+                                <span class="font-bold text-slate-800 dark:text-slate-200 text-xs">${card.address || 'NEZADÁNA'}</span>
                             </div>
                             <div>
-                                <span class="text-[9px] uppercase font-bold text-gray-400 block tracking-wider mb-0.5">Kontaktní osoba</span>
+                                <span class="text-xs uppercase font-bold text-gray-400 block tracking-wider mb-0.5">Kontaktní osoba</span>
                                 <span class="font-bold text-slate-800 dark:text-slate-200 text-xs">${card.contact || 'NEUVEDENA'}</span>
                             </div>
                             <div>
-                                <span class="text-[9px] uppercase font-bold text-gray-400 block tracking-wider mb-0.5">Telefonní číslo</span>
+                                <span class="text-xs uppercase font-bold text-gray-400 block tracking-wider mb-0.5">Telefonní číslo</span>
                                 <span class="font-bold text-slate-800 dark:text-slate-200 text-xs">${card.phone || 'NEUVEDENO'}</span>
                             </div>
                             <div>
-                                <span class="text-[9px] uppercase font-bold text-gray-400 block tracking-wider mb-0.5">E-mail</span>
+                                <span class="text-xs uppercase font-bold text-gray-400 block tracking-wider mb-0.5">E-mail</span>
                                 <span class="font-bold text-slate-800 dark:text-slate-200 text-xs break-all">${card.email || 'NEUVEDEN'}</span>
                             </div>
                         </div>
@@ -3090,7 +3298,7 @@
                         </div>
                         
                         <div class="pt-3 border-t border-gray-100 dark:border-slate-700 flex justify-between items-center text-xs">
-                            <button onclick="goToEditCustomerCard('${card.id}')" class="text-[#003366] hover:underline font-bold">✏️ Upravit v nastavení</button>
+                            <button onclick="goToEditCustomerCard(${jsArg(card.id)})" class="text-[#003366] hover:underline font-bold inline-flex items-center gap-1">${ic('pencil')} Upravit v nastavení</button>
                             <button onclick="closeCustomerCardModal()" class="text-gray-400 hover:text-slate-600 font-semibold">Zavřít</button>
                         </div>
                     </div>
@@ -3099,14 +3307,14 @@
                 body.innerHTML = `
                     <div class="space-y-4 text-center py-2">
                         <div class="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center mx-auto text-amber-500 border border-amber-200 text-lg">
-                            ⚠️
+                            ${ic('warning', 'w-6 h-6')}
                         </div>
                         <div class="space-y-1">
                             <h4 class="text-sm font-bold text-slate-800">Karta zákazníka nenalezena</h4>
                             <p class="text-xs text-gray-400">Pro název <b>${normName}</b> nebyl založen profil s detaily.</p>
                         </div>
-                        <button onclick="quickCreateCustomerCardFromModal('${normName}')" class="w-full bg-[#003366] hover:bg-black text-white font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition-colors shadow-sm mt-2">
-                            ➕ Vytvořit kartu zákazníka
+                        <button onclick="quickCreateCustomerCardFromModal(${jsArg(normName)})" class="w-full bg-[#003366] hover:bg-black text-white font-bold py-3 rounded-xl text-xs transition-colors shadow-sm mt-2">
+                            ${ic('plus')} Vytvořit kartu zákazníka
                         </button>
                     </div>
                 `;
@@ -3150,6 +3358,109 @@
             }, 150);
         }
 
+        // ====================================================================
+        //  v4.2: CHANGELOG (Novinky)
+        //  – Při nové verzi se okno s novinkami ukáže automaticky, a to
+        //    MAXIMÁLNĚ 1× ZA DEN po dobu 7 DNÍ od chvíle, kdy dané zařízení
+        //    novou verzi poprvé otevřelo. Pak už se samo neukazuje.
+        //  – Kdykoli ho jde otevřít ručně: Nastavení → Novinky v aplikaci.
+        //  – Pamatuje se v localStorage (každý telefon/počítač zvlášť).
+        //  NOVÁ VERZE = přidej nový záznam NA ZAČÁTEK pole CHANGELOG.
+        // ====================================================================
+        const CHANGELOG = [
+            {
+                version: '4.2',
+                date: '2026-10-05',
+                sections: [
+                    { title: 'Nové', items: [
+                        'Tlačítko pro tmavý režim v hlavičce (měsíc / slunce). Dokud ho nepřepneš, řídí se nastavením telefonu.',
+                        'Úprava cíle zákazníka v jednom okně – FP, KH i PK najednou (tužka v detailu zákazníka).',
+                        'V hlavičce štítek <b>Dnes</b> / <b>Jiný den</b>, ať je hned vidět, do kterého dne zapisuješ.',
+                        'Offline režim: bez signálu se appka načte s posledními daty a zápisy se odešlou po připojení.',
+                        'Tohle okno s novinkami (najdeš ho i v Nastavení).'
+                    ]},
+                    { title: 'Vzhled', items: [
+                        'Kompaktní hlavička – menší logo, datum jako hlavní nadpis.',
+                        'Větší písmo (min. 12 px), méně textu VELKÝMI PÍSMENY a tučně.',
+                        'Dlaždice Hotovo v tmavší zelené – čitelná i na slunci.',
+                        'Větší čísla zbývajících FP / KH / PK na dlaždicích.',
+                        'Ukazatel naložení je šedo-modrý (dřív červený už od 0 %).',
+                        'Jednotné ikony místo emoji, telefon u řidiče už nebliká.',
+                        'Stránku jde přiblížit dvěma prsty.'
+                    ]},
+                    { title: 'Opravy', items: [
+                        'Tmavý režim: opravené barvy, které se dřív ignorovaly (bílá pole).',
+                        'Zákazník nebo řidič s apostrofem v názvu (např. L\'ORÉAL) už nerozbije klikání.',
+                        'Smazání zákazníka ze svozu smaže cíl i nakládky naráz – nezůstanou „osiřelé“ záznamy.'
+                    ]}
+                ]
+            }
+        ];
+        const APP_VERSION = CHANGELOG[0].version;
+        const CHANGELOG_SHOW_DAYS = 7;
+
+        function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+        function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+        // Počet celých kalendářních dní mezi dvěma daty 'YYYY-MM-DD'
+        function daysBetween(fromStr, toStr) {
+            const a = fromStr.split('-').map(Number), b = toStr.split('-').map(Number);
+            return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000);
+        }
+
+        function renderChangelog() {
+            const body = document.getElementById('changelogBody');
+            if (!body) return;
+            body.innerHTML = CHANGELOG.map((rel, i) => `
+                <div class="${i > 0 ? 'pt-4 border-t border-gray-200' : ''}">
+                    <div class="flex items-baseline justify-between mb-2">
+                        <h3 class="text-base font-bold text-[#003366]">Verze ${escDC(rel.version)}</h3>
+                        <span class="text-xs text-gray-500">${escDC(formatDateToCzech(rel.date))}</span>
+                    </div>
+                    ${rel.sections.map(sec => `
+                        <p class="text-xs font-bold text-gray-500 uppercase mt-3 mb-1">${escDC(sec.title)}</p>
+                        <ul class="list-disc pl-5 space-y-1.5">
+                            ${sec.items.map(it => `<li>${it}</li>`).join('')}
+                        </ul>`).join('')}
+                </div>`).join('');
+        }
+
+        function openChangelog(isAuto) {
+            renderChangelog();
+            document.getElementById('changelogSubtitle').textContent = 'Verze ' + APP_VERSION;
+            const firstSeen = lsGet('changelogFirstSeen_' + APP_VERSION);
+            let footer = '';
+            if (isAuto && firstSeen) {
+                const left = CHANGELOG_SHOW_DAYS - 1 - daysBetween(firstSeen, getTodayStr());
+                footer = left > 0
+                    ? `Toto okno se ukáže ještě ${left}× (1× denně). Najdeš ho i v Nastavení.`
+                    : 'Dnes naposledy. Novinky najdeš kdykoli v Nastavení.';
+            }
+            document.getElementById('changelogFooter').textContent = footer;
+            const m = document.getElementById('changelogModal');
+            m.classList.remove('hidden');
+            m.classList.add('flex');
+        }
+
+        function closeChangelog() {
+            const m = document.getElementById('changelogModal');
+            m.classList.remove('flex');
+            m.classList.add('hidden');
+        }
+
+        // Automatické zobrazení: 1× za den, jen prvních 7 dní od první návštěvy této verze.
+        function maybeShowChangelog() {
+            const today = getTodayStr();
+            const firstKey = 'changelogFirstSeen_' + APP_VERSION;
+            let firstSeen = lsGet(firstKey);
+            if (!firstSeen) { firstSeen = today; lsSet(firstKey, today); }
+            const age = daysBetween(firstSeen, today);          // 0 = den první návštěvy
+            if (age < 0 || age >= CHANGELOG_SHOW_DAYS) return;  // týden uplynul
+            if (lsGet('changelogLastShown') === today) return;  // dnes už bylo
+            lsSet('changelogLastShown', today);
+            openChangelog(true);
+        }
+
         function switchTab(tabId, event) {
             if (editingTrailerPlanId) cancelTrailerEdit();
             clearGlobalSearch();
@@ -3161,8 +3472,8 @@
             document.getElementById('tab-settings').className = 'hidden-tab';
             
             const isCounterOrTrailers = (tabId === 'counter' || tabId === 'trailers');
-            document.getElementById('headerDateControls').style.display = isCounterOrTrailers ? 'flex' : 'none';
-            document.getElementById('globalSearchContainer').style.display = isCounterOrTrailers ? 'flex' : 'none';
+            // v4.2: celý druhý řádek hlavičky (kalendář + hledání) jen v Mřížce a Návěsech
+            document.getElementById('headerRow2').style.display = isCounterOrTrailers ? 'flex' : 'none';
             
             document.getElementById(`tab-${tabId}`).className = tabId === 'counter' ? 'active-tab p-4 space-y-5' : 'active-tab p-4 space-y-4';
             
@@ -3187,14 +3498,34 @@
         }
 
         // Spouštěcí sekvence, která zkontroluje minulé nastavení
-        if (localStorage.getItem('darkMode') === 'true') {
-            document.body.classList.add('dark', 'dark-mode');
-        } else {
-            document.body.classList.remove('dark', 'dark-mode');
+        applyThemeFromPreference();
+        if (window.matchMedia) {
+            const mq = window.matchMedia('(prefers-color-scheme: dark)');
+            const onSys = () => { if (localStorage.getItem('darkMode') === null) applyThemeFromPreference(); };
+            if (mq.addEventListener) mq.addEventListener('change', onSys); else if (mq.addListener) mq.addListener(onSys);
         }
+        // Po půlnoci (appka otevřená přes noc) přepočítat štítek Dnes / Jiný den.
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) updateDateUI(); });
         updateDateUI();
         updateBackupInfo();
         switchTab('counter');
+
+        // v4.2: verze v Nastavení + automatické okno s novinkami (po zmizení úvodní obrazovky)
+        (function () {
+            const lbl = document.getElementById('appVersionLabel');
+            if (lbl) lbl.textContent = APP_VERSION;
+            const later = () => setTimeout(maybeShowChangelog, 1200);
+            if (document.readyState === 'complete') later(); else window.addEventListener('load', later);
+            // Appka otevřená přes noc: po návratu do ní se novinky ukážou i další den.
+            document.addEventListener('visibilitychange', () => { if (!document.hidden) maybeShowChangelog(); });
+        })();
+
+        // v4.2: registrace Service Workeru (offline načtení aplikace)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW registrace selhala:', err));
+            });
+        }
     </script>
     <script src="pending-imports.js">
         
