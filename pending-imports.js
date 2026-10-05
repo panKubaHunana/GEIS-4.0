@@ -1,5 +1,6 @@
 /**
  * GEIS SVOZY - panel "Nove objednavky z e-mailu" (Faze 2)
+ * verze 4.2 (5.10.2026) – větší písmo, SVG ikony místo emoji
  * verze 4.1 (22.7.2026)
  * ---------------------------------------------------------------------------
  * Tento soubor se NAPOJUJE na existujici index.html appky - vyuziva uz
@@ -135,6 +136,9 @@
         });
     }
 
+    // v4.2: jednotné SVG ikony z index.html (window.ic); bez něj prázdný řetězec
+    function icon(name, cls) { return (typeof window.ic === 'function') ? window.ic(name, cls) : ''; }
+
     function renderPendingImports() {
         var el = ensurePanelContainer();
 
@@ -158,7 +162,7 @@
 
         var html = '' +
             '<div class="bg-amber-50 border-2 border-amber-400 rounded-xl p-4 mb-5 shadow-sm">' +
-            '  <h3 class="font-black text-amber-700 text-xs uppercase tracking-wider mb-3">📬 Nové objednávky z e-mailu (' + sorted.length + ') čekají na potvrzení</h3>' +
+            '  <h3 class="font-bold text-amber-700 text-sm mb-3 flex items-center gap-1.5">' + icon('inbox', 'w-5 h-5') + ' Nové objednávky z e-mailu (' + sorted.length + ') čekají na potvrzení</h3>' +
             '  <div class="space-y-3">';
 
         sorted.forEach(function (p) {
@@ -175,26 +179,26 @@
 
             html += '' +
                 '<div id="pi-row-' + esc(p.docId) + '" data-date="' + esc(rowDate) + '" class="bg-white rounded-lg border border-amber-200 p-3 space-y-2 shadow-sm">' +
-                '  <div class="text-[10px] text-gray-500">Od: <b>' + esc(p.customer || '-') + '</b> (' + esc(p.sourceEmail || '-') + ') &middot; ' + esc(rowDate) + '</div>' +
-                ((p.needsReview || (!p.fp && !p.kh && !p.pk)) ? '  <div class="text-[10px] font-bold text-amber-800 bg-amber-100 border border-amber-300 rounded px-2 py-1">⚠️ Množství zkontrolujte ručně – v e-mailu se nepodařilo spolehlivě určit počty (rozpis nesedí se souhrnem nebo chybí číslo). Otevřete tělo e-mailu níže.</div>' : '') +
-                (p.sourceSnippet ? '  <div class="text-[10px] text-gray-400 italic truncate" title="' + esc(p.sourceSnippet) + '">' + esc(p.sourceSnippet) + '</div>' : '') +
+                '  <div class="text-xs text-gray-500">Od: <b>' + esc(p.customer || '-') + '</b> (' + esc(p.sourceEmail || '-') + ') &middot; ' + esc(rowDate) + '</div>' +
+                ((p.needsReview || (!p.fp && !p.kh && !p.pk)) ? '  <div class="text-xs font-bold text-amber-800 bg-amber-100 border border-amber-300 rounded px-2 py-1">' + icon('warning') + ' Množství zkontrolujte ručně – v e-mailu se nepodařilo spolehlivě určit počty (rozpis nesedí se souhrnem nebo chybí číslo). Otevřete tělo e-mailu níže.</div>' : '') +
+                (p.sourceSnippet ? '  <div class="text-xs text-gray-400 italic truncate" title="' + esc(p.sourceSnippet) + '">' + esc(p.sourceSnippet) + '</div>' : '') +
                 (p.sourceBody ?
-                    '  <button type="button" onclick="pendingImportsToggleBody(\'' + esc(p.docId) + '\')" class="text-[10px] font-bold text-[#003366] underline">🔍 Zobrazit / skrýt e-mail</button>' +
-                    '  <div id="pi-body-' + esc(p.docId) + '" class="hidden mt-1 text-[10px] text-gray-600 bg-gray-50 border border-gray-200 rounded p-2 whitespace-pre-wrap max-h-40 overflow-y-auto">' + esc(p.sourceBody) + '</div>'
+                    '  <button type="button" onclick="pendingImportsToggleBody(\'' + esc(p.docId) + '\')" class="text-xs font-bold text-[#003366] underline">' + icon('search') + ' Zobrazit / skrýt e-mail</button>' +
+                    '  <div id="pi-body-' + esc(p.docId) + '" class="hidden mt-1 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded p-2 whitespace-pre-wrap max-h-40 overflow-y-auto">' + esc(p.sourceBody) + '</div>'
                     : '') +
                 '  <div class="grid grid-cols-2 gap-2">' +
                 '    <select class="pi-customer col-span-2 w-full bg-white border border-gray-300 rounded-lg p-2 text-xs font-bold outline-none focus:border-[#003366] text-slate-800">' + options + '</select>' +
-                '    <div><label class="text-[9px] font-bold text-gray-400 uppercase">FP</label>' +
+                '    <div><label class="text-xs font-bold text-gray-400 uppercase">FP</label>' +
                 '      <input type="number" class="pi-fp w-full border border-gray-300 rounded-lg p-1.5 text-xs font-bold text-center" value="' + (p.fp || 0) + '" min="0"></div>' +
-                '    <div><label class="text-[9px] font-bold text-gray-400 uppercase">KH</label>' +
+                '    <div><label class="text-xs font-bold text-gray-400 uppercase">KH</label>' +
                 '      <input type="number" class="pi-kh w-full border border-gray-300 rounded-lg p-1.5 text-xs font-bold text-center" value="' + (p.kh || 0) + '" min="0"></div>' +
-                '    <div class="col-span-2"><label class="text-[9px] font-bold text-gray-400 uppercase">PK</label>' +
+                '    <div class="col-span-2"><label class="text-xs font-bold text-gray-400 uppercase">PK</label>' +
                 '      <input type="number" class="pi-pk w-full border border-gray-300 rounded-lg p-1.5 text-xs font-bold text-center" value="' + (p.pk || 0) + '" min="0"></div>' +
                 '  </div>' +
-                (existing ? '  <div class="text-[10px] text-blue-600 font-semibold">Zákazník už dnes má cíl (FP:' + (existing.targetFP || 0) + ' KH:' + (existing.targetKH || 0) + ' PK:' + (existing.targetPK || 0) + ') – potvrzením se množství PŘIČTE.</div>' : '') +
+                (existing ? '  <div class="text-xs text-blue-600 font-semibold">Zákazník už dnes má cíl (FP:' + (existing.targetFP || 0) + ' KH:' + (existing.targetKH || 0) + ' PK:' + (existing.targetPK || 0) + ') – potvrzením se množství PŘIČTE.</div>' : '') +
                 '  <div class="flex gap-2 pt-1">' +
-                '    <button onclick="pendingImportsConfirm(\'' + esc(p.docId) + '\')" class="pi-confirm flex-1 bg-[#003366] hover:bg-black text-white text-[11px] font-bold py-2 rounded-lg uppercase transition-colors">✓ Potvrdit</button>' +
-                '    <button onclick="pendingImportsReject(\'' + esc(p.docId) + '\')" class="bg-gray-200 hover:bg-gray-300 text-slate-700 text-[11px] font-bold py-2 px-3 rounded-lg uppercase transition-colors">✕ Zamítnout</button>' +
+                '    <button onclick="pendingImportsConfirm(\'' + esc(p.docId) + '\')" class="pi-confirm flex-1 bg-[#003366] hover:bg-black text-white text-xs font-bold py-2 rounded-lg transition-colors">✓ Potvrdit</button>' +
+                '    <button onclick="pendingImportsReject(\'' + esc(p.docId) + '\')" class="bg-gray-200 hover:bg-gray-300 text-slate-700 text-xs font-bold py-2 px-3 rounded-lg transition-colors">✕ Zamítnout</button>' +
                 '  </div>' +
                 '</div>';
         });
