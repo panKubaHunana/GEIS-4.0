@@ -2,8 +2,7 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <!-- v4.2: povolen zoom (přístupnost). Auto-zoom na iOS řeší písmo 16 px v polích (viz CSS níže). -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Geis - Dispečink Svozů</title>
     <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="manifest" href="manifest.json">
@@ -93,9 +92,10 @@
             background-color: #166534;
             color: #ffffff;
         }
-        body.dark .text-gray-500 {
-            color: #94a3b8;
+        body.dark .bg-\[\#166534\] {
+            background-color: #14532d;
         }
+        body.dark .text-gray-500,
         body.dark .text-gray-400 {
             color: #94a3b8;
         }
@@ -104,41 +104,23 @@
             background-color: #334155;
             color: #f1f5f9;
         }
-        body.dark .text-slate-800,
-        body.dark .text-slate-800 {
-            color: #e2e8f0;
+        body.dark .bg-gray-200\/70 {
+            background-color: #0f172a;
         }
         body.dark .text-\[\#003366\] {
             color: #93c5fd;
+        }
+        /* štítky na světlém podkladu si v tmavém režimu nechají tmavě modrý text */
+        body.dark .bg-white\/80.text-\[\#003366\] {
+            color: #003366;
         }
         body.dark .bg-\[\#f1f5f9\] {
             background-color: #1e293b;
             color: #e2e8f0;
         }
 
-        /* štítky na světlém podkladu si v tmavém režimu nechají tmavě modrý text */
-        body.dark .bg-white\/80.text-\[\#003366\] {
-            color: #003366;
-        }
-        body.dark .bg-gray-200\/70 {
-            background-color: #0f172a;
-        }
-        body.dark .bg-\[\#166534\] {
-            background-color: #14532d;
-        }
-
-        /* v4.2: iOS přibližuje stránku při ťuknutí do pole s písmem < 16 px.
-           Místo zákazu zoomu dáme polím na iOS 16 px. */
-        @supports (-webkit-touch-callout: none) {
-            input, select, textarea { font-size: 16px !important; }
-        }
-
         /* v4.2: jednotné SVG ikony – zarovnání s textem */
         .ico { display: inline-block; vertical-align: -0.2em; flex-shrink: 0; }
-
-        /* v4.2: Changelog – seznam novinek */
-        #changelogModal li::marker { color: #003366; }
-        body.dark #changelogModal li::marker { color: #93c5fd; }
 
         /* Úvodní obrazovka (splash) - zobrazí se hned při spuštění, než se vše načte.
            Používá jen vlastní CSS (ne Tailwind), aby se ukázala okamžitě. */
@@ -190,40 +172,40 @@
     </script>
 
     <!-- Záhlaví s kalendářem -->
-    <header class="bg-white text-slate-900 px-3 pt-2 pb-2 shadow-md sticky top-0 z-20 border-b-4 border-[#003366] flex flex-col gap-2">
-        <!-- v4.2: kompaktní hlavička – malé logo, datum jako hlavní nadpis, přepínač tmavého režimu -->
-        <div class="flex items-center gap-2.5">
-            <img src="geis-logo.png" alt="Geis" class="h-9 w-auto object-contain shrink-0" onerror="this.style.display='none'">
-            <button type="button" onclick="jumpToToday()" title="Skočit na dnešek" class="flex-1 min-w-0 text-left active:scale-[0.98] transition-transform">
-                <div class="flex items-center gap-2">
-                    <span id="headerDateTitle" class="text-xl font-bold text-[#003366] leading-tight">–</span>
-                    <span id="headerDayBadge" class="text-xs font-bold px-2 py-0.5 rounded-full border">Dnes</span>
-                </div>
-                <p id="currentDateDisplay" class="text-xs text-slate-500 truncate leading-tight"></p>
-            </button>
+    <header class="bg-white text-slate-900 p-3 shadow-md sticky top-0 z-20 border-b-4 border-[#003366] flex flex-col gap-2">
+        <!-- Datum přes celou šířku (klik = skok na dnešek) -->
+        <div class="flex items-center justify-between gap-2">
+            <p class="text-sm text-slate-600 font-bold truncate cursor-pointer hover:text-[#003366] active:scale-95 transition-transform"
+               id="currentDateDisplay" onclick="jumpToToday()" title="Skočit na dnešek"></p>
+            <!-- v4.2: přepínač tmavého režimu (měsíc / slunce) -->
             <button type="button" onclick="toggleDarkMode()" title="Přepnout tmavý / světlý režim" aria-label="Přepnout tmavý režim"
-                    class="w-10 h-10 shrink-0 flex items-center justify-center rounded-full border border-gray-300 text-[#003366] bg-white active:bg-gray-200 shadow-sm">
+                    class="w-9 h-9 shrink-0 flex items-center justify-center rounded-full border border-gray-300 text-[#003366] bg-white active:bg-gray-200 shadow-sm">
                 <svg id="themeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"></svg>
             </button>
         </div>
 
-        <!-- Ovládání kalendáře + vyhledávání (jen v Mřížce a Návěsech) -->
-        <div id="headerRow2" class="flex items-center gap-2">
-            <div id="headerDateControls" class="flex items-center gap-1 shrink-0">
-                <button onclick="stepDate(-1)" aria-label="Předchozí den" class="w-9 h-9 flex items-center justify-center bg-white active:bg-gray-200 border border-gray-300 rounded-lg text-sm font-bold text-slate-700 shadow-sm transition-colors">◀</button>
-                <input type="date" id="appDatePicker" onchange="setDate(this.value)" class="h-9 text-sm font-bold text-[#003366] dark:text-blue-300 border border-gray-300 rounded-lg px-1.5 bg-white dark:bg-slate-800 text-center focus:outline-none shadow-sm cursor-pointer w-[128px]">
-                <button onclick="stepDate(1)" aria-label="Další den" class="w-9 h-9 flex items-center justify-center bg-white active:bg-gray-200 border border-gray-300 rounded-lg text-sm font-bold text-slate-700 shadow-sm transition-colors">▶</button>
-            </div>
+        <div class="flex justify-between items-start gap-2">
+            <!-- Velké logo -->
+            <img src="geis-logo.png" alt="Geis Logo" class="h-20 w-auto object-contain shrink-0" onerror="this.style.display='none'">
 
-            <!-- Globální vyhledávací pole -->
-            <div class="relative flex-1 min-w-0" id="globalSearchContainer">
-                <input type="text" id="globalDriverSearch" oninput="performGlobalDriverSearch(this.value)" placeholder="Hledat řidiče" class="w-full h-9 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg px-3 pr-8 text-sm font-bold outline-none focus:border-[#003366] uppercase placeholder:normal-case text-[#003366] dark:text-blue-300 placeholder-gray-500 shadow-sm">
-                <span class="absolute right-2.5 top-2.5 text-gray-500 pointer-events-none">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                </span>
+            <!-- Ovládání kalendáře + vyhledávání, napravo pod sebou -->
+            <div class="flex flex-col items-end gap-2 shrink-0">
+                <div id="headerDateControls" class="flex items-center gap-1">
+                    <button onclick="stepDate(-1)" class="w-8 h-8 flex items-center justify-center bg-white active:bg-gray-200 border border-gray-300 rounded text-xs font-bold text-slate-700 shadow-sm transition-colors">◀</button>
+                    <input type="date" id="appDatePicker" onchange="setDate(this.value)" class="h-8 text-xs font-bold text-[#003366] dark:text-blue-300 border border-gray-300 rounded px-1.5 bg-white dark:bg-slate-800 text-center focus:outline-none shadow-sm cursor-pointer w-[120px] sm:w-[132px]">
+                    <button onclick="stepDate(1)" class="w-8 h-8 flex items-center justify-center bg-white active:bg-gray-200 border border-gray-300 rounded text-xs font-bold text-slate-700 shadow-sm transition-colors">▶</button>
+                </div>
 
-                <!-- Plovoucí karta výsledků vyhledávání -->
-                <div id="globalSearchResults" class="absolute right-0 top-11 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-300 p-3 w-80 max-w-[calc(100vw-1.5rem)] hidden z-30"></div>
+                <!-- Globální vyhledávací pole -->
+                <div class="relative w-52" id="globalSearchContainer">
+                    <input type="text" id="globalDriverSearch" oninput="performGlobalDriverSearch(this.value)" placeholder="VYHLEDAT ŘIDIČE" class="w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg py-1.5 px-3 pr-8 text-xs font-bold outline-none focus:border-[#003366] uppercase text-[#003366] dark:text-blue-300 placeholder-gray-500 shadow-sm">
+                    <span class="absolute right-2.5 top-2.5 text-gray-500">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </span>
+
+                    <!-- Plovoucí karta výsledků vyhledávání -->
+                    <div id="globalSearchResults" class="absolute right-0 top-11 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-300 p-3 max-w-sm w-72 hidden z-30"></div>
+                </div>
             </div>
         </div>
     </header>
@@ -720,15 +702,6 @@
             </div>
         </details>
 
-        <!-- v4.2: Novinky / Changelog -->
-        <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-200 flex items-center justify-between gap-3">
-            <div class="min-w-0">
-                <h2 class="text-sm font-bold text-[#003366]">Novinky v aplikaci</h2>
-                <p class="text-xs text-gray-500">Verze <span id="appVersionLabel">–</span> · přehled změn</p>
-            </div>
-            <button onclick="openChangelog()" class="shrink-0 bg-[#003366] hover:bg-black text-white text-sm font-bold py-2 px-4 rounded-lg shadow-sm">Zobrazit</button>
-        </div>
-
         <!-- Zálohování a přenos -->
         <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-200 space-y-3">
             <h2 class="text-xs font-bold text-gray-400">Zálohování a Přenos Dat</h2>
@@ -745,24 +718,6 @@
             </div>
         </div>
     </main>
-
-    <!-- v4.2: CHANGELOG – okno s novinkami (zobrazí se 1× denně po dobu 7 dní od první návštěvy nové verze) -->
-    <div id="changelogModal" class="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4" onclick="if(event.target===this)closeChangelog()" role="dialog" aria-modal="true" aria-labelledby="changelogTitle">
-        <div class="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-xl flex flex-col max-h-[85vh] border border-gray-200">
-            <div class="bg-[#003366] p-4 text-white flex justify-between items-start border-b-4 border-[#002244] shrink-0">
-                <div>
-                    <h2 id="changelogTitle" class="text-lg font-bold leading-tight text-white">Co je nového</h2>
-                    <p id="changelogSubtitle" class="text-sm text-slate-200 mt-0.5">---</p>
-                </div>
-                <button onclick="closeChangelog()" aria-label="Zavřít" class="bg-[#002244] hover:bg-[#001530] text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">✕</button>
-            </div>
-            <div id="changelogBody" class="p-4 space-y-5 overflow-y-auto flex-1 text-sm text-slate-800"></div>
-            <div class="p-4 border-t border-gray-200 shrink-0 space-y-2">
-                <button onclick="closeChangelog()" class="w-full bg-[#003366] hover:bg-[#002244] text-white font-bold py-3 rounded-lg text-sm shadow-sm active:scale-[0.99]">Rozumím</button>
-                <p id="changelogFooter" class="text-xs text-gray-500 text-center"></p>
-            </div>
-        </div>
-    </div>
 
     <!-- Menu se spodními bezpečnými zónami iOS -->
     <nav class="fixed bottom-0 w-full bg-white border-t border-gray-200 p-3 flex justify-around shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe z-10">
@@ -803,15 +758,6 @@
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-
-        // v4.2: OFFLINE REŽIM – data z Firestore se drží i v telefonu (IndexedDB).
-        // Bez signálu appka ukáže poslední známá data a zápisy odešle po připojení.
-        // Musí se zavolat hned po vytvoření db, před prvním čtením.
-        try {
-            db.enablePersistence({ synchronizeTabs: true }).catch(err => {
-                console.warn('Offline perzistence není dostupná:', err && err.code);
-            });
-        } catch (e) { console.warn('Offline perzistence:', e); }
 
         // ====================================================================
         //  v4.2: POMOCNÉ FUNKCE – ikony a bezpečné vkládání textu
@@ -1122,15 +1068,14 @@
             }
         }
 
-        // v4.2: Když si uživatel režim ještě nikdy nepřepnul, řídíme se nastavením
-        // telefonu/počítače (systémový tmavý režim). Po ručním přepnutí platí jeho volba.
+        // v4.2: Dokud si uživatel režim ručně nepřepne, řídíme se nastavením
+        // telefonu/počítače (systémový tmavý režim). Po přepnutí platí jeho volba.
         function isDarkPreferred() {
             const saved = localStorage.getItem('darkMode');
             if (saved === 'true') return true;
             if (saved === 'false') return false;
             return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
         }
-
         function applyThemeFromPreference() {
             const dark = isDarkPreferred();
             document.body.classList.toggle('dark', dark);
@@ -1155,28 +1100,8 @@
             return d.toLocaleDateString('cs-CZ', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         }
 
-        // v4.2: krátký nadpis do hlavičky – "Po 5. 10."
-        function formatDateShortCz(dateStr) {
-            const parts = dateStr.split('-');
-            const d = new Date(parts[0], parts[1] - 1, parts[2]);
-            const days = ['Ne', 'Po', 'Út', 'St', 'Čt', 'Pá', 'So'];
-            return `${days[d.getDay()]} ${d.getDate()}. ${d.getMonth() + 1}.`;
-        }
-
         function updateDateUI() {
             document.getElementById('currentDateDisplay').textContent = formatDateToCzech(activeDate);
-            const titleEl = document.getElementById('headerDateTitle');
-            if (titleEl) titleEl.textContent = formatDateShortCz(activeDate);
-            // Štítek "Dnes" (zelený) / "Jiný den" (oranžový) – ať je hned vidět,
-            // že zapisuješ do jiného dne než dnešního.
-            const badge = document.getElementById('headerDayBadge');
-            if (badge) {
-                const isToday = activeDate === getTodayStr();
-                badge.textContent = isToday ? 'Dnes' : 'Jiný den';
-                badge.className = 'text-xs font-bold px-2 py-0.5 rounded-full border ' + (isToday
-                    ? 'bg-green-50 text-green-800 border-green-300'
-                    : 'bg-orange-100 text-orange-800 border-orange-300');
-            }
             const picker = document.getElementById('appDatePicker');
             if (picker) {
                 picker.value = activeDate;
@@ -1377,9 +1302,7 @@
         }
 
         // FIREBASE INITIAL REALTIME SYNC
-        // v4.2: { source: 'server' } – výchozí data se smí založit jen podle skutečného
-        // stavu na serveru. Offline (prázdná lokální cache) by jinak přepsaly ostrá data.
-        db.collection("settings").get({ source: 'server' }).then((snapshot) => {
+        db.collection("settings").get().then((snapshot) => {
             if (snapshot.empty) {
                 db.collection("settings").doc("customersDelivery").set({ list: defaultCustomers });
                 db.collection("settings").doc("customersPickup").set({ list: defaultCustomers });
@@ -1396,19 +1319,19 @@
                     });
                 });
             } else {
-                db.collection("settings").doc("carriers").get({ source: 'server' }).then(doc => {
+                db.collection("settings").doc("carriers").get().then(doc => {
                     if (!doc.exists) db.collection("settings").doc("carriers").set({ list: defaultCarriers });
                 });
-                db.collection("settings").doc("vehicles").get({ source: 'server' }).then(doc => {
+                db.collection("settings").doc("vehicles").get().then(doc => {
                     if (!doc.exists) db.collection("settings").doc("vehicles").set({ list: defaultVehicles });
                 });
-                db.collection("settings").doc("sandboxDirections").get({ source: 'server' }).then(doc => {
+                db.collection("settings").doc("sandboxDirections").get().then(doc => {
                     if (!doc.exists) db.collection("settings").doc("sandboxDirections").set({ list: defaultSandboxDirections });
-                }).catch(() => {});
+                });
             }
-        }).catch(() => { /* offline – výchozí data teď nezakládáme */ });
+        });
 
-        db.collection("settings").onSnapshot({ includeMetadataChanges: true }, (snapshot) => {
+        db.collection("settings").onSnapshot((snapshot) => {
             snapshot.forEach((doc) => {
                 if (doc.id === '_meta') {
                     const meta = doc.data() || {};
@@ -1425,8 +1348,7 @@
                 }
                 localStorage.setItem(doc.id, JSON.stringify(doc.data().list || []));
             });
-            // v4.2: jednorázové migrace pouštíme jen nad daty ze serveru, ne z offline cache
-            if (!snapshot.metadata.fromCache) _settingsLoaded = true;
+            _settingsLoaded = true;
             renderSettingsTab();
             populateAllDropdowns();
             renderDriversTab();
@@ -1470,7 +1392,7 @@
             renderTrailersTab();
         });
 
-        db.collection("driverCards").onSnapshot({ includeMetadataChanges: true }, (snapshot) => {
+        db.collection("driverCards").onSnapshot((snapshot) => {
             localDriverCards = [];
             snapshot.forEach((doc) => {
                 localDriverCards.push({ docId: doc.id, ...doc.data() });
@@ -1483,11 +1405,11 @@
             renderDriversTab();
             populateAllDropdowns();
             renderSandboxTab();
-            if (!snapshot.metadata.fromCache) _driverCardsLoaded = true;
+            _driverCardsLoaded = true;
             tryMigrateDrivers();
         });
 
-        db.collection("customerCards").onSnapshot({ includeMetadataChanges: true }, (snapshot) => {
+        db.collection("customerCards").onSnapshot((snapshot) => {
             localCustomerCards = [];
             snapshot.forEach((doc) => {
                 localCustomerCards.push({ docId: doc.id, ...doc.data() });
@@ -1495,7 +1417,7 @@
             localStorage.setItem('customerCards', JSON.stringify(localCustomerCards));
             renderCustomerCardsList();
             populateAllDropdowns();   // nabídky zákazníků teď vychází z Karet zákazníka
-            if (!snapshot.metadata.fromCache) _cardsLoaded = true;
+            _cardsLoaded = true;
             tryMigrateCustomers();
             tryRenameCustomerCards();
             trySeedDefaultsV2();
@@ -1934,9 +1856,10 @@
 
                     formContainer.innerHTML = `
                         <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-inner space-y-4">
-                            <div class="flex justify-between items-center">
-                                <span class="text-sm font-bold text-[#003366]">${isEditing ? 'Upravit zadanou nakládku' : 'Zapsat nakládku řidiče'}</span>
-                                <select id="modalDriverSelect" class="bg-white border border-gray-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-700 outline-none shadow-sm focus:border-[#003366] w-36 text-slate-800">
+                            <!-- v4.2: nadpis nad výběrem, výběr řidiče přes celou šířku (dlouhá jména se nesřezávají) -->
+                            <div class="space-y-1.5">
+                                <label for="modalDriverSelect" class="block text-sm font-bold text-[#003366]">${isEditing ? 'Upravit zadanou nakládku' : 'Zapsat nakládku řidiče'}</label>
+                                <select id="modalDriverSelect" class="w-full h-11 bg-white border border-gray-300 rounded-lg px-3 text-sm font-bold outline-none shadow-sm focus:border-[#003366] text-slate-800">
                                     ${driverOptions}
                                 </select>
                             </div>
@@ -3358,109 +3281,6 @@
             }, 150);
         }
 
-        // ====================================================================
-        //  v4.2: CHANGELOG (Novinky)
-        //  – Při nové verzi se okno s novinkami ukáže automaticky, a to
-        //    MAXIMÁLNĚ 1× ZA DEN po dobu 7 DNÍ od chvíle, kdy dané zařízení
-        //    novou verzi poprvé otevřelo. Pak už se samo neukazuje.
-        //  – Kdykoli ho jde otevřít ručně: Nastavení → Novinky v aplikaci.
-        //  – Pamatuje se v localStorage (každý telefon/počítač zvlášť).
-        //  NOVÁ VERZE = přidej nový záznam NA ZAČÁTEK pole CHANGELOG.
-        // ====================================================================
-        const CHANGELOG = [
-            {
-                version: '4.2',
-                date: '2026-10-05',
-                sections: [
-                    { title: 'Nové', items: [
-                        'Tlačítko pro tmavý režim v hlavičce (měsíc / slunce). Dokud ho nepřepneš, řídí se nastavením telefonu.',
-                        'Úprava cíle zákazníka v jednom okně – FP, KH i PK najednou (tužka v detailu zákazníka).',
-                        'V hlavičce štítek <b>Dnes</b> / <b>Jiný den</b>, ať je hned vidět, do kterého dne zapisuješ.',
-                        'Offline režim: bez signálu se appka načte s posledními daty a zápisy se odešlou po připojení.',
-                        'Tohle okno s novinkami (najdeš ho i v Nastavení).'
-                    ]},
-                    { title: 'Vzhled', items: [
-                        'Kompaktní hlavička – menší logo, datum jako hlavní nadpis.',
-                        'Větší písmo (min. 12 px), méně textu VELKÝMI PÍSMENY a tučně.',
-                        'Dlaždice Hotovo v tmavší zelené – čitelná i na slunci.',
-                        'Větší čísla zbývajících FP / KH / PK na dlaždicích.',
-                        'Ukazatel naložení je šedo-modrý (dřív červený už od 0 %).',
-                        'Jednotné ikony místo emoji, telefon u řidiče už nebliká.',
-                        'Stránku jde přiblížit dvěma prsty.'
-                    ]},
-                    { title: 'Opravy', items: [
-                        'Tmavý režim: opravené barvy, které se dřív ignorovaly (bílá pole).',
-                        'Zákazník nebo řidič s apostrofem v názvu (např. L\'ORÉAL) už nerozbije klikání.',
-                        'Smazání zákazníka ze svozu smaže cíl i nakládky naráz – nezůstanou „osiřelé“ záznamy.'
-                    ]}
-                ]
-            }
-        ];
-        const APP_VERSION = CHANGELOG[0].version;
-        const CHANGELOG_SHOW_DAYS = 7;
-
-        function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
-        function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
-
-        // Počet celých kalendářních dní mezi dvěma daty 'YYYY-MM-DD'
-        function daysBetween(fromStr, toStr) {
-            const a = fromStr.split('-').map(Number), b = toStr.split('-').map(Number);
-            return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000);
-        }
-
-        function renderChangelog() {
-            const body = document.getElementById('changelogBody');
-            if (!body) return;
-            body.innerHTML = CHANGELOG.map((rel, i) => `
-                <div class="${i > 0 ? 'pt-4 border-t border-gray-200' : ''}">
-                    <div class="flex items-baseline justify-between mb-2">
-                        <h3 class="text-base font-bold text-[#003366]">Verze ${escDC(rel.version)}</h3>
-                        <span class="text-xs text-gray-500">${escDC(formatDateToCzech(rel.date))}</span>
-                    </div>
-                    ${rel.sections.map(sec => `
-                        <p class="text-xs font-bold text-gray-500 uppercase mt-3 mb-1">${escDC(sec.title)}</p>
-                        <ul class="list-disc pl-5 space-y-1.5">
-                            ${sec.items.map(it => `<li>${it}</li>`).join('')}
-                        </ul>`).join('')}
-                </div>`).join('');
-        }
-
-        function openChangelog(isAuto) {
-            renderChangelog();
-            document.getElementById('changelogSubtitle').textContent = 'Verze ' + APP_VERSION;
-            const firstSeen = lsGet('changelogFirstSeen_' + APP_VERSION);
-            let footer = '';
-            if (isAuto && firstSeen) {
-                const left = CHANGELOG_SHOW_DAYS - 1 - daysBetween(firstSeen, getTodayStr());
-                footer = left > 0
-                    ? `Toto okno se ukáže ještě ${left}× (1× denně). Najdeš ho i v Nastavení.`
-                    : 'Dnes naposledy. Novinky najdeš kdykoli v Nastavení.';
-            }
-            document.getElementById('changelogFooter').textContent = footer;
-            const m = document.getElementById('changelogModal');
-            m.classList.remove('hidden');
-            m.classList.add('flex');
-        }
-
-        function closeChangelog() {
-            const m = document.getElementById('changelogModal');
-            m.classList.remove('flex');
-            m.classList.add('hidden');
-        }
-
-        // Automatické zobrazení: 1× za den, jen prvních 7 dní od první návštěvy této verze.
-        function maybeShowChangelog() {
-            const today = getTodayStr();
-            const firstKey = 'changelogFirstSeen_' + APP_VERSION;
-            let firstSeen = lsGet(firstKey);
-            if (!firstSeen) { firstSeen = today; lsSet(firstKey, today); }
-            const age = daysBetween(firstSeen, today);          // 0 = den první návštěvy
-            if (age < 0 || age >= CHANGELOG_SHOW_DAYS) return;  // týden uplynul
-            if (lsGet('changelogLastShown') === today) return;  // dnes už bylo
-            lsSet('changelogLastShown', today);
-            openChangelog(true);
-        }
-
         function switchTab(tabId, event) {
             if (editingTrailerPlanId) cancelTrailerEdit();
             clearGlobalSearch();
@@ -3472,8 +3292,8 @@
             document.getElementById('tab-settings').className = 'hidden-tab';
             
             const isCounterOrTrailers = (tabId === 'counter' || tabId === 'trailers');
-            // v4.2: celý druhý řádek hlavičky (kalendář + hledání) jen v Mřížce a Návěsech
-            document.getElementById('headerRow2').style.display = isCounterOrTrailers ? 'flex' : 'none';
+            document.getElementById('headerDateControls').style.display = isCounterOrTrailers ? 'flex' : 'none';
+            document.getElementById('globalSearchContainer').style.display = isCounterOrTrailers ? 'flex' : 'none';
             
             document.getElementById(`tab-${tabId}`).className = tabId === 'counter' ? 'active-tab p-4 space-y-5' : 'active-tab p-4 space-y-4';
             
@@ -3504,28 +3324,9 @@
             const onSys = () => { if (localStorage.getItem('darkMode') === null) applyThemeFromPreference(); };
             if (mq.addEventListener) mq.addEventListener('change', onSys); else if (mq.addListener) mq.addListener(onSys);
         }
-        // Po půlnoci (appka otevřená přes noc) přepočítat štítek Dnes / Jiný den.
-        document.addEventListener('visibilitychange', () => { if (!document.hidden) updateDateUI(); });
         updateDateUI();
         updateBackupInfo();
         switchTab('counter');
-
-        // v4.2: verze v Nastavení + automatické okno s novinkami (po zmizení úvodní obrazovky)
-        (function () {
-            const lbl = document.getElementById('appVersionLabel');
-            if (lbl) lbl.textContent = APP_VERSION;
-            const later = () => setTimeout(maybeShowChangelog, 1200);
-            if (document.readyState === 'complete') later(); else window.addEventListener('load', later);
-            // Appka otevřená přes noc: po návratu do ní se novinky ukážou i další den.
-            document.addEventListener('visibilitychange', () => { if (!document.hidden) maybeShowChangelog(); });
-        })();
-
-        // v4.2: registrace Service Workeru (offline načtení aplikace)
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW registrace selhala:', err));
-            });
-        }
     </script>
     <script src="pending-imports.js">
         
