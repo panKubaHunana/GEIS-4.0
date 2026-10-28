@@ -1,5 +1,7 @@
 /**
  * GEIS SVOZY - panel "Nove objednavky z e-mailu" (Faze 2)
+ * verze 4.3 (28.10.2026) – tlačítko „Potvrdit vše“ (hromadné potvrzení),
+ *                          datum objednávky i z createdAt, když chybí p.date
  * verze 4.2 (5.10.2026) – větší písmo, SVG ikony místo emoji
  * verze 4.1 (22.7.2026)
  * ---------------------------------------------------------------------------
@@ -124,6 +126,38 @@
         return null;
     }
 
+    // v4.3: Na jaký den objednávka patří.
+    //  1) p.date (YYYY-MM-DD nebo D.M.YYYY)
+    //  2) datum vytvoření návrhu (createdAt – ISO text nebo Firestore Timestamp)
+    //  3) teprve nakonec aktuálně zobrazený den v appce
+    function pad2(n) { return String(n).padStart(2, '0'); }
+    function toLocalYmd(d) {
+        return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+    }
+    function resolveOrderDate(p, fallback) {
+        var raw = p && p.date;
+        if (typeof raw === 'string') {
+            var t = raw.trim();
+            if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+            var m = t.match(/^(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})$/);
+            if (m) return m[3] + '-' + pad2(m[2]) + '-' + pad2(m[1]);
+        }
+        var c = p && p.createdAt;
+        if (c) {
+            var d = null;
+            if (typeof c.toDate === 'function') d = c.toDate();
+            else if (typeof c === 'string' || typeof c === 'number') d = new Date(c);
+            if (d && !isNaN(d.getTime())) return toLocalYmd(d);
+        }
+        return fallback || '';
+    }
+    function fmtCz(ymd) {
+        var a = String(ymd || '').split('-');
+        return a.length === 3 ? (parseInt(a[2], 10) + '. ' + parseInt(a[1], 10) + '. ' + a[0]) : ymd;
+    }
+
+    var bulkBusy = false;
+
     function escapeRe(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
     function sortAlpha(arr) {
@@ -163,11 +197,14 @@
         var html = '' +
             '<div class="bg-amber-50 border-2 border-amber-400 rounded-xl p-4 mb-5 shadow-sm">' +
             '  <h3 class="font-bold text-amber-700 text-sm mb-3 flex items-center gap-1.5">' + icon('inbox', 'w-5 h-5') + ' Nové objednávky z e-mailu (' + sorted.length + ') čekají na potvrzení</h3>' +
+            (sorted.length > 1 ?
+            '  <button id="pi-confirm-all" type="button" onclick="pendingImportsConfirmAll()" ' + (bulkBusy ? 'disabled ' : '') + 'class="w-full mb-3 bg-green-700 hover:bg-green-800 disabled:opacity-60 text-white text-sm font-bold py-2.5 rounded-lg transition-colors shadow-sm">' +
+            (bulkBusy ? 'Ukládám…' : '✓✓ Potvrdit vše (' + sorted.length + ')') + '</button>' : '') +
             '  <div class="space-y-3">';
 
         sorted.forEach(function (p) {
             var guess = fuzzyMatchCustomer(p.customer, p.sourceEmail, custPickup);
-            var rowDate = p.date || today;
+            var rowDate = resolveOrderDate(p, today);
             var existing = guess ? targets.find(function (t) {
                 return t.date === rowDate && t.customer === guess.toUpperCase();
             }) : null;
@@ -178,8 +215,8 @@
                 }).join('');
 
             html += '' +
-                '<div id="pi-row-' + esc(p.docId) + '" data-date="' + esc(rowDate) + '" class="bg-white rounded-lg border border-amber-200 p-3 space-y-2 shadow-sm">' +
-                '  <div class="text-xs text-gray-500">Od: <b>' + esc(p.customer || '-') + '</b> (' + esc(p.sourceEmail || '-') + ') &middot; ' + esc(rowDate) + '</div>' +
+                '<div id="pi-row-' + esc(p.docId) + '" data-docid="' + esc(p.docId) + '" data-date="' + esc(rowDate) + '" data-review="' + ((p.needsReview || (!p.fp && !p.kh && !p.pk)) ? '1' : '0') + '" class="bg-white rounded-lg border border-amber-200 p-3 space-y-2 shadow-sm">' +
+                '  <div class="text-xs text-gray-500">Od: <b>' + esc(p.customer || '-') + '</b> (' + esc(p.sourceEmail || '-') + ') &middot; <b class="text-amber-700">' + esc(fmtCz(rowDate)) + '</b></div>' +
                 ((p.needsReview || (!p.fp && !p.kh && !p.pk)) ? '  <div class="text-xs font-bold text-amber-800 bg-amber-100 border border-amber-300 rounded px-2 py-1">' + icon('warning') + ' Množství zkontrolujte ručně – v e-mailu se nepodařilo spolehlivě určit počty (rozpis nesedí se souhrnem nebo chybí číslo). Otevřete tělo e-mailu níže.</div>' : '') +
                 (p.sourceSnippet ? '  <div class="text-xs text-gray-400 italic truncate" title="' + esc(p.sourceSnippet) + '">' + esc(p.sourceSnippet) + '</div>' : '') +
                 (p.sourceBody ?
@@ -255,6 +292,99 @@
                 targetPK: pk
             }).then(finish).catch(fail);
         }
+    };
+
+    // ======================================================================
+    //  v4.3: HROMADNÉ POTVRZENÍ
+    //  - bere hodnoty přímo z formulářů (respektuje ruční opravy zákazníka/počtů)
+    //  - každou objednávku uloží na SVŮJ den (data-date řádku)
+    //  - přeskočí řádky bez zákazníka, s nulovým množstvím a ty „ke kontrole“
+    //  - více objednávek stejného zákazníka na stejný den sečte do jednoho cíle
+    //  - k existujícímu cíli PŘIČÍTÁ atomicky (FieldValue.increment)
+    //  - zápis cíle + smazání jeho návrhů jdou v jedné dávce (batch) → když
+    //    se něco nepovede, nic se nepřičte napůl a návrhy zůstanou v panelu
+    // ======================================================================
+    window.pendingImportsConfirmAll = function () {
+        if (bulkBusy) return;
+        var rows = document.querySelectorAll('#pendingImportsPanel [data-docid]');
+        var ready = [], skipped = { customer: 0, qty: 0, review: 0 };
+
+        Array.prototype.forEach.call(rows, function (row) {
+            var customer = (row.querySelector('.pi-customer') || {}).value || '';
+            var fp = Math.max(0, parseInt(row.querySelector('.pi-fp').value) || 0);
+            var kh = Math.max(0, parseInt(row.querySelector('.pi-kh').value) || 0);
+            var pk = Math.max(0, parseInt(row.querySelector('.pi-pk').value) || 0);
+            if (row.dataset.review === '1') { skipped.review++; return; }
+            if (!customer) { skipped.customer++; return; }
+            if (!fp && !kh && !pk) { skipped.qty++; return; }
+            ready.push({ docId: row.dataset.docid, date: row.dataset.date, customer: customer.toUpperCase(), fp: fp, kh: kh, pk: pk });
+        });
+
+        var skippedTotal = skipped.customer + skipped.qty + skipped.review;
+        var skippedTxt = skippedTotal ? ('\n\nPřeskočím ' + skippedTotal + ' (zůstanou v panelu k ručnímu potvrzení):' +
+            (skipped.review ? '\n • ke kontrole množství: ' + skipped.review : '') +
+            (skipped.customer ? '\n • bez vybraného zákazníka: ' + skipped.customer : '') +
+            (skipped.qty ? '\n • s nulovým množstvím: ' + skipped.qty : '')) : '';
+
+        if (!ready.length) { alert('Žádnou objednávku nejde potvrdit automaticky.' + skippedTxt); return; }
+
+        // Sečtení podle den + zákazník
+        var groups = {}, order = [];
+        ready.forEach(function (r) {
+            var key = r.date + '|' + r.customer;
+            if (!groups[key]) { groups[key] = { date: r.date, customer: r.customer, fp: 0, kh: 0, pk: 0, docIds: [] }; order.push(key); }
+            var g = groups[key];
+            g.fp += r.fp; g.kh += r.kh; g.pk += r.pk; g.docIds.push(r.docId);
+        });
+
+        // Přehled podle dní do potvrzovacího okna
+        var perDay = {};
+        ready.forEach(function (r) { perDay[r.date] = (perDay[r.date] || 0) + 1; });
+        var dayLines = Object.keys(perDay).sort().map(function (d) { return ' • ' + fmtCz(d) + ': ' + perDay[d] + ' obj.'; }).join('\n');
+
+        if (!confirm('Potvrdit ' + ready.length + ' objednávek?\n\nUloží se na tyto dny:\n' + dayLines + skippedTxt)) return;
+
+        bulkBusy = true;
+        renderPendingImports();
+
+        var targets = (typeof localDailyTargets !== 'undefined') ? localDailyTargets : [];
+        var inc = firebase.firestore.FieldValue.increment;
+        var MAX_OPS = 450; // Firestore limit je 500 operací na dávku
+        var batches = [], cur = db.batch(), curOps = 0, idSeed = Date.now();
+
+        order.forEach(function (key, i) {
+            var g = groups[key];
+            var need = 1 + g.docIds.length;
+            if (curOps && curOps + need > MAX_OPS) { batches.push(cur); cur = db.batch(); curOps = 0; }
+            var existing = targets.find(function (t) { return t.date === g.date && t.customer === g.customer; });
+            if (existing) {
+                cur.update(db.collection('dailyTargets').doc(existing.id || existing.docId), {
+                    targetFP: inc(g.fp), targetKH: inc(g.kh), targetPK: inc(g.pk)
+                });
+            } else {
+                var id = String(idSeed + i);
+                cur.set(db.collection('dailyTargets').doc(id), {
+                    id: id, date: g.date, customer: g.customer, targetFP: g.fp, targetKH: g.kh, targetPK: g.pk
+                });
+            }
+            g.docIds.forEach(function (d) { cur.delete(db.collection('pendingImports').doc(d)); });
+            curOps += need;
+        });
+        if (curOps) batches.push(cur);
+
+        var done = 0;
+        batches.reduce(function (p, b) {
+            return p.then(function () { return b.commit(); }).then(function () { done++; });
+        }, Promise.resolve()).then(function () {
+            bulkBusy = false;
+            renderPendingImports();
+            alert('Hotovo – potvrzeno ' + ready.length + ' objednávek (' + order.length + ' denních cílů).' +
+                (skippedTotal ? '\nV panelu zůstalo ' + skippedTotal + ' k ruční kontrole.' : ''));
+        }).catch(function (e) {
+            bulkBusy = false;
+            renderPendingImports();
+            alert('Chyba při ukládání: ' + e.message + '\n\nUloženo bylo ' + done + ' z ' + batches.length + ' dávek. Co se neuložilo, zůstalo v panelu – stačí kliknout znovu.');
+        });
     };
 
     window.pendingImportsToggleBody = function (docId) {
