@@ -13,7 +13,7 @@
  * uživatel viděl staré (chybné) chování. Network-first vždy zkusí síť a
  * cache použije jen když není připojení.
  */
-const CACHE_NAME = 'geis-svozy-v4.2.0';
+const CACHE_NAME = 'geis-svozy-v4.3.0';
 
 const urlsToCache = [
   './',
